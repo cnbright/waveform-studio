@@ -6,6 +6,10 @@
 
 Waveform Studio 是一个单文件离线示波器波形工作台，用于查看和测量 Tektronix `WFM#003` 与 Keysight `H5` 存储波形文件。
 
+### 界面示例
+
+![Waveform Studio 示例界面](./docs/images/waveform-studio-demo.png)
+
 ### 功能特性
 
 - 支持同时导入多个 `.wfm` 与 `.h5` 文件
@@ -48,6 +52,10 @@ MIT
 ## English
 
 Waveform Studio is a single-file offline oscilloscope waveform workbench for viewing and measuring Tektronix `WFM#003` and Keysight `H5` waveform files.
+
+### Screenshot
+
+![Waveform Studio demo screenshot](./docs/images/waveform-studio-demo.png)
 
 ### Features
 
