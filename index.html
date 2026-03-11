@@ -682,14 +682,18 @@ self.onmessage = (e) => {
       return { mins, maxs, factor, levels: mins.length };
     }
 
-    function convertRawToVolt(channel, raw) {
-      return (raw * channel.meta.y_mult + channel.meta.y_zero) * channel.yScale + channel.yOffset;
+    function convertRawToSignalVolt(channel, raw) {
+      return (raw * channel.meta.y_mult + channel.meta.y_zero) * channel.yScale;
     }
 
-    function sampleAtTime(channel, time) {
+    function convertRawToDisplayVolt(channel, raw) {
+      return convertRawToSignalVolt(channel, raw) + channel.yOffset;
+    }
+
+    function sampleAtTime(channel, time, includeOffset = true) {
       if (!channel) return NaN;
       const idx = clamp(Math.round((time - channel.meta.x_zero) / channel.meta.x_incr), 0, channel.meta.npts - 1);
-      return convertRawToVolt(channel, channel.raw[idx]);
+      return includeOffset ? convertRawToDisplayVolt(channel, channel.raw[idx]) : convertRawToSignalVolt(channel, channel.raw[idx]);
     }
 
     function getChannelById(id) {
@@ -745,8 +749,8 @@ self.onmessage = (e) => {
         const mn = ch.mins[level];
         const mx = ch.maxs[level];
         for (let i = 0; i < mn.length; i++) {
-          const a = convertRawToVolt(ch, mn[i]);
-          const b = convertRawToVolt(ch, mx[i]);
+          const a = convertRawToDisplayVolt(ch, mn[i]);
+          const b = convertRawToDisplayVolt(ch, mx[i]);
           if (a < vMin) vMin = a;
           if (b > vMax) vMax = b;
         }
@@ -997,7 +1001,7 @@ self.onmessage = (e) => {
       const ts = [];
       for (let i = range.i0; i < range.i1; i += step) {
         const t = channel.meta.x_zero + i * channel.meta.x_incr;
-        const v = convertRawToVolt(channel, channel.raw[i]);
+        const v = convertRawToSignalVolt(channel, channel.raw[i]);
         ys.push(v);
         ts.push(t);
         if (v < vmin) vmin = v;
@@ -1136,8 +1140,8 @@ self.onmessage = (e) => {
       let handles;
       if (kind === "x") {
         handles = [
-          { name: "A", t: tCenter - tSpan * 0.12, v: sampleAtTime(channel, tCenter - tSpan * 0.12) },
-          { name: "B", t: tCenter + tSpan * 0.12, v: sampleAtTime(channel, tCenter + tSpan * 0.12) }
+          { name: "A", t: tCenter - tSpan * 0.12, v: sampleAtTime(channel, tCenter - tSpan * 0.12, false) },
+          { name: "B", t: tCenter + tSpan * 0.12, v: sampleAtTime(channel, tCenter + tSpan * 0.12, false) }
         ];
       } else if (kind === "y") {
         handles = [
@@ -1146,11 +1150,11 @@ self.onmessage = (e) => {
         ];
       } else if (kind === "xy") {
         handles = [
-          { name: "A", t: tCenter - tSpan * 0.1, v: sampleAtTime(channel, tCenter - tSpan * 0.1) },
-          { name: "B", t: tCenter + tSpan * 0.1, v: sampleAtTime(channel, tCenter + tSpan * 0.1) }
+          { name: "A", t: tCenter - tSpan * 0.1, v: sampleAtTime(channel, tCenter - tSpan * 0.1, false) },
+          { name: "B", t: tCenter + tSpan * 0.1, v: sampleAtTime(channel, tCenter + tSpan * 0.1, false) }
         ];
       } else {
-        handles = [{ name: "A", t: tCenter, v: sampleAtTime(channel, tCenter) }];
+        handles = [{ name: "A", t: tCenter, v: sampleAtTime(channel, tCenter, false) }];
       }
       const cursor = { ...base, handles };
       state.cursorPairs.push(cursor);
@@ -1172,10 +1176,12 @@ self.onmessage = (e) => {
       const a = pair.handles[0] || null;
       const b = pair.handles[1] || null;
       const read = (handle) => {
-        if (!handle) return { t: NaN, v: NaN };
-        if (pair.kind === "follow") return { t: handle.t, v: sampleAtTime(channel, handle.t) };
-        if (pair.kind === "x") return { t: handle.t, v: sampleAtTime(channel, handle.t) };
-        return { t: handle.t, v: handle.v };
+        if (!handle) return { t: NaN, v: NaN, displayV: NaN };
+        if (pair.kind === "follow" || pair.kind === "x") {
+          const signalV = sampleAtTime(channel, handle.t, false);
+          return { t: handle.t, v: signalV, displayV: signalV + (channel ? channel.yOffset : 0) };
+        }
+        return { t: handle.t, v: handle.v, displayV: handle.v };
       };
       const p1 = read(a);
       const p2 = read(b);
@@ -1297,7 +1303,7 @@ self.onmessage = (e) => {
         const row = [t];
         for (const ch of enabledChannels) {
           const idx = clamp(Math.round((t - ch.meta.x_zero) / ch.meta.x_incr), 0, ch.meta.npts - 1);
-          row.push(convertRawToVolt(ch, ch.raw[idx]));
+          row.push(convertRawToSignalVolt(ch, ch.raw[idx]));
         }
         lines.push(row.join(","));
       }
@@ -1471,8 +1477,8 @@ self.onmessage = (e) => {
             bt += binDt;
           }
           if (localMax < localMin) continue;
-          const y1 = voltToPx(convertRawToVolt(channel, localMin));
-          const y2 = voltToPx(convertRawToVolt(channel, localMax));
+          const y1 = voltToPx(convertRawToDisplayVolt(channel, localMin));
+          const y2 = voltToPx(convertRawToDisplayVolt(channel, localMax));
           const x = px + 0.5;
           plotCtx.beginPath();
           plotCtx.moveTo(x, y1);
@@ -1595,7 +1601,7 @@ self.onmessage = (e) => {
           overlayCtx.moveTo(px, 0);
           overlayCtx.lineTo(px, overlayCanvas.height);
           overlayCtx.stroke();
-          const py = pair.kind === "xy" ? voltToPx(handle.v) : voltToPx(metrics[index === 0 ? "p1" : "p2"].v);
+          const py = pair.kind === "xy" ? voltToPx(handle.v) : voltToPx(metrics[index === 0 ? "p1" : "p2"].displayV);
           drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
           drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`, color);
         });
@@ -1639,7 +1645,7 @@ self.onmessage = (e) => {
         overlayCtx.restore();
         const active = getActiveChannel(true);
         const time = pxToTime(state.hoverInfo.x);
-        const volt = active ? sampleAtTime(active, time) : pxToVolt(state.hoverInfo.y);
+        const volt = active ? sampleAtTime(active, time, false) : pxToVolt(state.hoverInfo.y);
         drawTag(state.hoverInfo.x + 14 * state.dpr, state.hoverInfo.y + 14 * state.dpr, `t ${fmt(time, "s")} | v ${fmt(volt, "V")}`, "#d9f6ff");
       }
       if (state.zoomBox) {
@@ -1689,10 +1695,10 @@ self.onmessage = (e) => {
           const handle = pair.handles[j];
           let hx = timeToPx(handle.t);
           let hy = 0;
-          if (pair.kind === "x") hy = voltToPx(j === 0 ? metrics.p1.v : metrics.p2.v);
+          if (pair.kind === "x") hy = voltToPx(j === 0 ? metrics.p1.displayV : metrics.p2.displayV);
           else if (pair.kind === "y") { hx = 16 * state.dpr + j * 28 * state.dpr; hy = voltToPx(handle.v); }
           else if (pair.kind === "xy") { hx = timeToPx(handle.t); hy = voltToPx(handle.v); }
-          else { hx = timeToPx(handle.t); hy = voltToPx(metrics.p1.v); }
+          else { hx = timeToPx(handle.t); hy = voltToPx(metrics.p1.displayV); }
           const dx = px - hx;
           const dy = py - hy;
           if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j };
@@ -1716,7 +1722,7 @@ self.onmessage = (e) => {
       const volt = pxToVolt(clamp(py, 0, overlayCanvas.height));
       if (pair.kind === "x") {
         handle.t = time;
-        handle.v = sampleAtTime(channel, time);
+        handle.v = sampleAtTime(channel, time, false);
       } else if (pair.kind === "y") {
         handle.v = volt;
       } else if (pair.kind === "xy") {
@@ -1724,7 +1730,7 @@ self.onmessage = (e) => {
         handle.v = volt;
       } else {
         handle.t = time;
-        handle.v = sampleAtTime(channel, time);
+        handle.v = sampleAtTime(channel, time, false);
       }
     }
 
