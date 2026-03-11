@@ -1,0 +1,2064 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Waveform Studio</title>
+  <style>
+    :root{
+      --bg:#09111d;
+      --panel:#101c2f;
+      --line:rgba(153,196,255,.14);
+      --line-strong:rgba(153,196,255,.24);
+      --text:#eef4ff;
+      --muted:#8ea2bf;
+      --warn:#fbbf24;
+      --shadow:0 18px 48px rgba(1,7,18,.42);
+      --toolbar-cols:1.6fr 10px 1fr 10px 1fr;
+      --footer-cols:1.2fr 10px 1fr 10px 1.2fr;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    html{
+      scrollbar-color:rgba(110,231,255,.38) rgba(8,17,29,.92);
+      scrollbar-width:thin;
+    }
+    body{
+      margin:0;
+      overflow:hidden;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(110,231,255,.10), transparent 24%),
+        radial-gradient(circle at top right, rgba(134,239,172,.10), transparent 22%),
+        linear-gradient(180deg, #08101a 0%, #09111d 38%, #060d16 100%);
+      font-family:"Segoe UI Variable","PingFang SC","Microsoft YaHei UI","Noto Sans SC",sans-serif;
+    }
+    button,input,select{font:inherit;color:inherit}
+    button{
+      cursor:pointer;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(16,28,47,.92), rgba(10,17,29,.92));
+      border-radius:12px;
+      padding:10px 12px;
+      transition:.18s ease;
+    }
+    button:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+    button.active,button.primary{
+      border-color:rgba(110,231,255,.45);
+      box-shadow:inset 0 0 0 1px rgba(110,231,255,.12);
+      background:linear-gradient(180deg, rgba(16,48,67,.96), rgba(10,20,35,.96));
+    }
+    button.warn{border-color:rgba(251,191,36,.38);color:#fde68a}
+    input[type="number"], input[type="text"], select{
+      width:100%;
+      min-width:0;
+      border:1px solid var(--line);
+      background:rgba(6,14,25,.78);
+      border-radius:10px;
+      padding:9px 10px;
+      outline:none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus, select:focus{
+      border-color:rgba(110,231,255,.35);
+      box-shadow:0 0 0 3px rgba(110,231,255,.08);
+    }
+    input[type="color"]{
+      width:34px;
+      height:28px;
+      border:none;
+      background:transparent;
+      padding:0;
+      border-radius:8px;
+    }
+    .app{display:grid;grid-template-rows:auto minmax(520px,1fr) minmax(180px,24vh);height:100%;gap:12px;padding:12px}
+    body::-webkit-scrollbar,
+    .sidebar::-webkit-scrollbar,
+    .footerPanel::-webkit-scrollbar,
+    .footerBlock::-webkit-scrollbar,
+    .metricGrid::-webkit-scrollbar,
+    .cursorTableWrap::-webkit-scrollbar{
+      width:12px;
+      height:12px;
+    }
+    body::-webkit-scrollbar-track,
+    .sidebar::-webkit-scrollbar-track,
+    .footerPanel::-webkit-scrollbar-track,
+    .footerBlock::-webkit-scrollbar-track,
+    .metricGrid::-webkit-scrollbar-track,
+    .cursorTableWrap::-webkit-scrollbar-track{
+      background:rgba(8,17,29,.9);
+      border-radius:999px;
+      box-shadow:inset 0 0 0 1px rgba(153,196,255,.08);
+    }
+    body::-webkit-scrollbar-thumb,
+    .sidebar::-webkit-scrollbar-thumb,
+    .footerPanel::-webkit-scrollbar-thumb,
+    .footerBlock::-webkit-scrollbar-thumb,
+    .metricGrid::-webkit-scrollbar-thumb,
+    .cursorTableWrap::-webkit-scrollbar-thumb{
+      background:linear-gradient(180deg, rgba(110,231,255,.58), rgba(56,189,248,.34));
+      border-radius:999px;
+      border:2px solid rgba(8,17,29,.95);
+      box-shadow:0 0 0 1px rgba(110,231,255,.08), 0 0 14px rgba(56,189,248,.18);
+    }
+    body::-webkit-scrollbar-thumb:hover,
+    .sidebar::-webkit-scrollbar-thumb:hover,
+    .footerPanel::-webkit-scrollbar-thumb:hover,
+    .footerBlock::-webkit-scrollbar-thumb:hover,
+    .metricGrid::-webkit-scrollbar-thumb:hover,
+    .cursorTableWrap::-webkit-scrollbar-thumb:hover{
+      background:linear-gradient(180deg, rgba(110,231,255,.72), rgba(56,189,248,.46));
+    }
+    .toolbar{display:grid;grid-template-columns:var(--toolbar-cols);gap:0;align-items:stretch}
+    .toolbarSection,.sidebar,.stage,.footerPanel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(16,28,47,.86), rgba(10,17,29,.86));
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      min-width:0;
+      min-height:0;
+    }
+    .toolbarSection{padding:12px}
+    .toolbarResizer{
+      position:relative;
+      width:10px;
+      cursor:col-resize;
+      user-select:none;
+    }
+    .toolbarResizer::before{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:10px;
+      bottom:10px;
+      width:2px;
+      transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg, rgba(153,196,255,.08), rgba(110,231,255,.34), rgba(153,196,255,.08));
+      box-shadow:0 0 10px rgba(110,231,255,.14);
+    }
+    .toolbarResizer:hover::before,
+    .toolbarResizer.active::before{
+      background:linear-gradient(180deg, rgba(110,231,255,.22), rgba(110,231,255,.72), rgba(110,231,255,.22));
+    }
+    .toolbarTitle{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .toolbarRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .toolbarRow.compact > *{flex:0 0 auto}
+    .toolbarRow .grow{flex:1 1 180px}
+    .toolbarRow .rangeField{display:grid;gap:6px;min-width:110px;flex:1 1 120px}
+    .toolbarRow .rangeField label,.field label{font-size:11px;color:var(--muted)}
+    .workspace{min-height:520px;display:grid;grid-template-columns:280px 1fr;gap:12px}
+    .sidebar{padding:14px;overflow:auto}
+    .sectionHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .sectionHeader h2{margin:0;font-size:15px;font-weight:700}
+    .sectionMeta,.tiny{font-size:12px;color:var(--muted)}
+    .channelList{display:flex;flex-direction:column;gap:10px}
+    .channelCard{
+      border:1px solid var(--line);
+      background:rgba(6,14,25,.62);
+      border-radius:16px;
+      padding:12px;
+      display:grid;
+      gap:10px;
+    }
+    .channelCard.activeMeasure{
+      border-color:rgba(134,239,172,.36);
+      box-shadow:inset 0 0 0 1px rgba(134,239,172,.14);
+    }
+    .channelTop{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+    .channelName{display:grid;gap:4px;min-width:0;flex:1 1 auto}
+    .channelName strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .channelActions,.stack{display:flex;gap:8px;flex-wrap:wrap}
+    .channelFields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .field{display:grid;gap:6px;min-width:0}
+    .legendDot{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:0 0 12px currentColor;margin-top:3px;flex:0 0 auto}
+    .statusCard{margin-top:14px;border:1px dashed var(--line);border-radius:16px;padding:12px;background:rgba(7,14,24,.52)}
+    .statusCard pre{margin:0;white-space:pre-wrap;color:#c5d3e6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5}
+    .stage{padding:10px;display:grid;grid-template-rows:auto minmax(360px,1fr);gap:10px;overflow:hidden}
+    .stageTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:2px 4px 0}
+    .heroTitle{display:grid;gap:5px}
+    .heroTitle h1{margin:0;font-size:20px;letter-spacing:.01em}
+    .heroTitle p{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+    .hudGrid{display:grid;grid-template-columns:repeat(4, minmax(120px, 1fr));gap:8px;width:min(660px,100%)}
+    .hudCard,.metricCard,.summaryLine{
+      border:1px solid rgba(153,196,255,.12);
+      border-radius:14px;
+      background:rgba(9,18,31,.68);
+    }
+    .hudCard{padding:10px 12px;display:grid;gap:5px;min-width:0}
+    .hudCard .label,.metricCard strong{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .hudCard .value,.metricCard span{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .plotShell{
+      position:relative;
+      min-height:0;
+      height:100%;
+      min-height:360px;
+      border-radius:18px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(110,231,255,.06), transparent 24%),
+        linear-gradient(180deg, rgba(4,10,18,.98), rgba(7,14,24,.94));
+      border:1px solid rgba(153,196,255,.10);
+    }
+    canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .overlayHud{position:absolute;left:14px;right:14px;top:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none}
+    .scopeBadgeRow{display:flex;flex-wrap:wrap;gap:8px}
+    .scopeBadge,.pill{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(153,196,255,.18);
+      background:rgba(7,14,24,.72);
+      color:#d9e9fb;
+      font-size:12px;
+    }
+    .pill{display:inline-flex;align-items:center;gap:8px}
+    .axisPill{
+      position:absolute;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(153,196,255,.18);
+      background:rgba(7,14,24,.7);
+      color:#cfe1f7;
+      font-size:11px;
+      pointer-events:none;
+    }
+    .axisPill.x{left:14px;bottom:12px}
+    .axisPill.y{right:14px;bottom:12px}
+    .footerPanel{display:grid;grid-template-columns:var(--footer-cols);gap:0;padding:12px;overflow:auto;max-height:100%}
+    .app.focus-workspace{grid-template-rows:auto minmax(620px,1fr) minmax(108px,14vh)}
+    .app.focus-workspace .toolbar{gap:0}
+    .app.focus-workspace .toolbarSection{padding:6px 8px;border-radius:14px}
+    .app.focus-workspace .toolbarTitle{font-size:9px;margin-bottom:2px;letter-spacing:.05em}
+    .app.focus-workspace .toolbarRow{gap:5px}
+    .app.focus-workspace button{padding:5px 8px;border-radius:9px}
+    .app.focus-workspace .pill{padding:4px 7px;font-size:10px}
+    .app.focus-workspace .toolbarRow .rangeField{gap:2px;min-width:72px;flex:1 1 78px}
+    .app.focus-workspace .toolbarRow .rangeField label{font-size:9px}
+    .app.focus-workspace input[type="number"],
+    .app.focus-workspace input[type="text"],
+    .app.focus-workspace select{padding:5px 6px;border-radius:7px}
+    .app.focus-workspace .toolbarSection:nth-child(3) .toolbarRow.compact{margin-bottom:4px}
+    .app.focus-workspace .toolbarSection:nth-child(3) .toolbarRow:last-child{align-items:end}
+    .app.focus-workspace .toolbarResizer::before{top:6px;bottom:6px}
+    .app.focus-workspace .workspace{grid-template-columns:220px 1fr;min-height:620px}
+    .app.focus-workspace .stage{padding:8px;grid-template-rows:auto minmax(520px,1fr);gap:8px}
+    .app.focus-workspace .stageTop{padding:0;gap:6px;align-items:center}
+    .app.focus-workspace .heroTitle{gap:2px}
+    .app.focus-workspace .heroTitle h1{font-size:14px}
+    .app.focus-workspace .heroTitle p{display:none}
+    .app.focus-workspace .hudGrid{grid-template-columns:repeat(4, minmax(98px, 1fr));gap:6px;width:min(500px,100%)}
+    .app.focus-workspace .hudCard{padding:6px 8px;gap:2px}
+    .app.focus-workspace .hudCard .label{font-size:10px}
+    .app.focus-workspace .hudCard .value{font-size:12px}
+    .app.focus-workspace .plotShell{min-height:520px}
+    .app.focus-workspace .footerPanel{opacity:.88}
+    .app.focus-workspace .footerBlock{padding:8px;gap:6px}
+    .app.focus-workspace .metricCard,
+    .app.focus-workspace .summaryLine{padding:8px 10px}
+    .footerResizer{
+      position:relative;
+      width:10px;
+      cursor:col-resize;
+      user-select:none;
+    }
+    .footerResizer::before{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:10px;
+      bottom:10px;
+      width:2px;
+      transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg, rgba(153,196,255,.08), rgba(110,231,255,.34), rgba(153,196,255,.08));
+      box-shadow:0 0 10px rgba(110,231,255,.14);
+    }
+    .footerResizer:hover::before,
+    .footerResizer.active::before{
+      background:linear-gradient(180deg, rgba(110,231,255,.22), rgba(110,231,255,.72), rgba(110,231,255,.22));
+    }
+    .footerBlock{
+      min-width:0;
+      min-height:0;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(7,14,24,.54);
+      padding:12px;
+      display:grid;
+      gap:10px;
+      overflow:auto;
+    }
+    .footerBlockHeader{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .footerBlockHeader h3{margin:0;font-size:14px}
+    .footerBlockHeader span{font-size:12px;color:var(--muted)}
+    .metricGrid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;align-content:start;overflow:auto;min-height:0}
+    .metricCard{padding:10px;display:grid;gap:4px;min-width:0}
+    .cursorSummary{display:grid;gap:8px;align-content:start}
+    .summaryLine{padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-size:13px}
+    .summaryLine .key{color:var(--muted)}
+    .cursorTableWrap{overflow:auto;border-radius:14px;border:1px solid rgba(153,196,255,.12);background:rgba(9,18,31,.62)}
+    table{border-collapse:collapse;width:100%;min-width:560px}
+    th,td{padding:10px;border-bottom:1px solid rgba(153,196,255,.08);text-align:left;font-size:12px;white-space:nowrap}
+    th{position:sticky;top:0;background:rgba(9,18,31,.96);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+    tr.selected{background:rgba(110,231,255,.10)}
+    .emptyState{border:1px dashed rgba(153,196,255,.16);border-radius:16px;padding:18px;color:var(--muted);line-height:1.55;font-size:13px}
+    .miniButton{padding:6px 8px;border-radius:10px;font-size:12px}
+    #fileInput{display:none}
+    @media (max-width: 1500px){
+      .toolbar{grid-template-columns:1fr}
+      .toolbarResizer{display:none}
+      .footerPanel{grid-template-columns:1fr}
+      .footerResizer{display:none}
+      .hudGrid{grid-template-columns:repeat(2, minmax(140px,1fr))}
+    }
+    @media (max-width: 1080px){
+      .app{grid-template-rows:auto auto auto}
+      .workspace{grid-template-columns:1fr}
+      .sidebar{max-height:36vh}
+      .stage{min-height:46vh}
+    }
+    @media (max-width: 720px){
+      body{overflow:auto}
+      .app{height:auto;min-height:100%}
+      .hudGrid,.metricGrid,.channelFields{grid-template-columns:1fr}
+      .stageTop{padding:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="appRoot">
+    <section class="toolbar" id="toolbar">
+      <div class="toolbarSection">
+        <div class="toolbarTitle">文件与视图</div>
+        <div class="toolbarRow">
+          <button id="btnOpen" class="primary">导入 WFM / H5</button>
+          <input id="fileInput" type="file" accept=".wfm,.WFM,.h5,.H5" multiple />
+          <button id="btnFocusWorkspace">专注波形</button>
+          <button id="btnAuto">全局自适应</button>
+          <button id="btnReset">重置视图</button>
+          <button id="btnExportVisible">导出当前视图 CSV</button>
+          <button id="btnExportFull">导出全量抽点 CSV</button>
+          <div class="grow"></div>
+          <div class="pill">支持 `.wfm` / `.h5`，可多文件叠加</div>
+        </div>
+      </div>
+      <div class="toolbarResizer" data-toolbar-split="0"></div>
+      <div class="toolbarSection">
+        <div class="toolbarTitle">游标工具</div>
+        <div class="toolbarRow">
+          <button id="btnAddX">X 游标对</button>
+          <button id="btnAddY">Y 游标对</button>
+          <button id="btnAddXY">XY 游标对</button>
+          <button id="btnAddFollow">跟随游标</button>
+          <button id="btnDeleteCursor" class="warn">删除选中游标</button>
+          <button id="btnClearCursors">清空全部游标</button>
+        </div>
+      </div>
+      <div class="toolbarResizer" data-toolbar-split="1"></div>
+      <div class="toolbarSection">
+        <div class="toolbarTitle">量程与测量范围</div>
+        <div class="toolbarRow compact">
+          <button id="btnScopeView" class="active">当前视图测量</button>
+          <button id="btnScopeFull">全波形测量</button>
+        </div>
+        <div class="toolbarRow" style="margin-top:10px">
+          <div class="rangeField">
+            <label for="tMinInput">tMin (s)</label>
+            <input id="tMinInput" type="number" step="0.000001" />
+          </div>
+          <div class="rangeField">
+            <label for="tMaxInput">tMax (s)</label>
+            <input id="tMaxInput" type="number" step="0.000001" />
+          </div>
+          <div class="rangeField">
+            <label for="vMinInput">vMin (V)</label>
+            <input id="vMinInput" type="number" step="0.001" />
+          </div>
+          <div class="rangeField">
+            <label for="vMaxInput">vMax (V)</label>
+            <input id="vMaxInput" type="number" step="0.001" />
+          </div>
+          <button id="btnApplyRange" class="primary">应用范围</button>
+          <div class="rangeField" style="max-width:130px">
+            <label for="exportStep">全量导出抽点</label>
+            <input id="exportStep" type="number" min="1" step="1" value="10" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <aside class="sidebar">
+        <div class="sectionHeader">
+          <div>
+            <h2>通道工作区</h2>
+            <div class="sectionMeta">保留多通道叠加，明确主测量通道</div>
+          </div>
+          <div id="channelCount" class="pill">0 个通道</div>
+        </div>
+        <div id="channelList" class="channelList"></div>
+        <div class="statusCard">
+          <div class="sectionHeader" style="margin-bottom:8px">
+            <h2>状态</h2>
+            <span id="statusMini" class="sectionMeta">待机</span>
+          </div>
+          <pre id="statusText">等待导入波形文件。</pre>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="stageTop">
+          <div class="heroTitle">
+            <h1>Waveform Studio</h1>
+            <p>滚轮缩放，拖拽平移，按住 Shift 可框选放大。游标直接拖动，自动测量始终围绕当前主测量通道更新。</p>
+          </div>
+          <div class="hudGrid">
+            <div class="hudCard">
+              <div class="label">主测量通道</div>
+              <div id="hudActiveChannel" class="value">未选择</div>
+            </div>
+            <div class="hudCard">
+              <div class="label">测量范围</div>
+              <div id="hudScope" class="value">当前视图</div>
+            </div>
+            <div class="hudCard">
+              <div class="label">游标状态</div>
+              <div id="hudCursor" class="value">无选中游标</div>
+            </div>
+            <div class="hudCard">
+              <div class="label">视图跨度</div>
+              <div id="hudSpan" class="value">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="plotShell" id="plotShell">
+          <canvas id="plotCanvas"></canvas>
+          <canvas id="overlayCanvas"></canvas>
+          <div class="overlayHud">
+            <div class="scopeBadgeRow">
+              <div id="scopeBadge" class="scopeBadge">测量基于: 当前视图</div>
+              <div id="dataBadge" class="scopeBadge">暂无数据</div>
+            </div>
+            <div class="scopeBadgeRow">
+              <div class="scopeBadge">双击空白处可全局自适应</div>
+            </div>
+          </div>
+          <div class="axisPill x" id="xAxisText">Time</div>
+          <div class="axisPill y" id="yAxisText">Volt</div>
+        </div>
+      </section>
+    </section>
+
+    <section class="footerPanel" id="footerPanel">
+      <div class="footerBlock">
+        <div class="footerBlockHeader">
+          <h3>自动测量</h3>
+          <span id="measurementContext">基于当前主测量通道</span>
+        </div>
+        <div id="measurementCards" class="metricGrid"></div>
+      </div>
+      <div class="footerResizer" data-footer-split="0"></div>
+
+      <div class="footerBlock">
+        <div class="footerBlockHeader">
+          <h3>游标实时读数</h3>
+          <span id="cursorContext">选中游标后在波形区直接拖动</span>
+        </div>
+        <div id="cursorSummary" class="cursorSummary"></div>
+      </div>
+      <div class="footerResizer" data-footer-split="1"></div>
+
+      <div class="footerBlock">
+        <div class="footerBlockHeader">
+          <h3>游标列表</h3>
+          <span id="cursorTableHint">颜色、差值、删除</span>
+        </div>
+        <div class="cursorTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>类型</th>
+                <th>通道</th>
+                <th>颜色</th>
+                <th>T1</th>
+                <th>T2</th>
+                <th>ΔT</th>
+                <th>V1</th>
+                <th>V2</th>
+                <th>ΔV</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="cursorTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/h5wasm@0.8.11/dist/iife/h5wasm.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      channels: [],
+      viewState: { tMin: 0, tMax: 1, vMin: -1, vMax: 1 },
+      activeMeasurementChannel: null,
+      cursorPairs: [],
+      measurementScope: "view",
+      focusWorkspace: false,
+      toolbarWidths: [1.6, 1, 1],
+      footerWidths: [1.2, 1, 1.2],
+      channelTagRects: [],
+      importSession: { active: false, pendingFiles: 0, loadedChannels: 0, failedFiles: 0, startedAt: 0 },
+      deferredPanelTimer: 0,
+      measurementTaskSeq: 0,
+      hoverInfo: null,
+      selectedCursor: null,
+      zoomBox: null,
+      dragging: null,
+      nextChannelId: 1,
+      nextCursorId: 1,
+      dpr: Math.max(1, window.devicePixelRatio || 1),
+      lastMeasurement: null
+    };
+
+    const palette = ["#6ee7ff", "#86efac", "#fda4af", "#fbbf24", "#a78bfa", "#38bdf8", "#fb7185", "#34d399"];
+    const plotCanvas = $("plotCanvas");
+    const overlayCanvas = $("overlayCanvas");
+    const plotCtx = plotCanvas.getContext("2d", { alpha: false });
+    const overlayCtx = overlayCanvas.getContext("2d");
+
+    const workerSrc = `
+self.onmessage = (e) => {
+  const msg = e.data;
+  if (msg.type !== "parse") return;
+  try {
+    const { fileId, name, buf } = msg;
+    const u8 = new Uint8Array(buf);
+    const headerBytes = 891;
+    if (u8.byteLength <= headerBytes + 2) throw new Error("文件尺寸不足，无法按 WFM#003 解析。");
+    function f64LE(off) {
+      return new DataView(buf, off, 8).getFloat64(0, true);
+    }
+    const y_mult = f64LE(168);
+    const y_zero = f64LE(176);
+    const x_incr = f64LE(488);
+    const x_zero = f64LE(496);
+    const npts = Math.floor((u8.byteLength - headerBytes) / 2);
+    const raw = new Int16Array(npts);
+    let p = headerBytes;
+    for (let i = 0; i < npts; i++) {
+      const hi = u8[p++];
+      const lo = u8[p++];
+      let v = (hi << 8) | lo;
+      if (v & 0x8000) v -= 0x10000;
+      raw[i] = v;
+    }
+    const factor = 8;
+    const mins = [raw];
+    const maxs = [raw];
+    let curMin = raw;
+    let curMax = raw;
+    while (true) {
+      const m = Math.ceil(curMin.length / factor);
+      const mn = new Int16Array(m);
+      const mx = new Int16Array(m);
+      for (let j = 0; j < m; j++) {
+        const start = j * factor;
+        const end = Math.min((j + 1) * factor, curMin.length);
+        let vmin = 32767;
+        let vmax = -32768;
+        for (let k = start; k < end; k++) {
+          const a = curMin[k];
+          const b = curMax[k];
+          if (a < vmin) vmin = a;
+          if (b > vmax) vmax = b;
+        }
+        mn[j] = vmin;
+        mx[j] = vmax;
+      }
+      mins.push(mn);
+      maxs.push(mx);
+      curMin = mn;
+      curMax = mx;
+      if (m <= 2048) break;
+    }
+    const transfer = [raw.buffer];
+    for (let i = 1; i < mins.length; i++) transfer.push(mins[i].buffer, maxs[i].buffer);
+    self.postMessage({
+      type: "parsed",
+      fileId,
+      name,
+      headerBytes,
+      npts,
+      y_mult,
+      y_zero,
+      x_incr,
+      x_zero,
+      factor,
+      levels: mins.length,
+      rawBuffer: raw.buffer,
+      minBuffers: mins.slice(1).map((arr) => arr.buffer),
+      maxBuffers: maxs.slice(1).map((arr) => arr.buffer)
+    }, transfer);
+  } catch (err) {
+    self.postMessage({ type: "error", fileId: msg.fileId, message: String(err) });
+  }
+};`;
+    const parserWorker = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" })));
+
+    function setStatus(text, mini = "") {
+      $("statusText").textContent = text;
+      $("statusMini").textContent = mini || text.split("\n")[0];
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function fmt(value, unit) {
+      if (!isFinite(value)) return "不可用";
+      const abs = Math.abs(value);
+      let out;
+      if (abs >= 1) out = value.toFixed(3);
+      else if (abs >= 1e-3) out = value.toFixed(6);
+      else if (abs >= 1e-6) out = value.toFixed(9);
+      else out = value.toExponential(3);
+      return `${out} ${unit}`;
+    }
+
+    function pickColor(index) {
+      return palette[index % palette.length];
+    }
+
+    function getGlobalTimeRange() {
+      if (!state.channels.length) return null;
+      let t0 = Infinity;
+      let t1 = -Infinity;
+      for (const ch of state.channels) {
+        const a = ch.meta.x_zero;
+        const b = ch.meta.x_zero + (ch.meta.npts - 1) * ch.meta.x_incr;
+        if (a < t0) t0 = a;
+        if (b > t1) t1 = b;
+      }
+      return { t0, t1 };
+    }
+
+    function buildPyramidFromRaw(raw, factor = 8) {
+      const mins = [raw];
+      const maxs = [raw];
+      let curMin = raw;
+      let curMax = raw;
+      while (true) {
+        const m = Math.ceil(curMin.length / factor);
+        const mn = new Int16Array(m);
+        const mx = new Int16Array(m);
+        for (let j = 0; j < m; j++) {
+          const start = j * factor;
+          const end = Math.min((j + 1) * factor, curMin.length);
+          let vmin = 32767;
+          let vmax = -32768;
+          for (let k = start; k < end; k++) {
+            const a = curMin[k];
+            const b = curMax[k];
+            if (a < vmin) vmin = a;
+            if (b > vmax) vmax = b;
+          }
+          mn[j] = vmin;
+          mx[j] = vmax;
+        }
+        mins.push(mn);
+        maxs.push(mx);
+        curMin = mn;
+        curMax = mx;
+        if (m <= 2048) break;
+      }
+      return { mins, maxs, factor, levels: mins.length };
+    }
+
+    function convertRawToVolt(channel, raw) {
+      return (raw * channel.meta.y_mult + channel.meta.y_zero) * channel.yScale + channel.yOffset;
+    }
+
+    function sampleAtTime(channel, time) {
+      if (!channel) return NaN;
+      const idx = clamp(Math.round((time - channel.meta.x_zero) / channel.meta.x_incr), 0, channel.meta.npts - 1);
+      return convertRawToVolt(channel, channel.raw[idx]);
+    }
+
+    function getChannelById(id) {
+      return state.channels.find((ch) => ch.id === id) || null;
+    }
+
+    function getActiveChannel(preferEnabled = true) {
+      const ch = getChannelById(state.activeMeasurementChannel);
+      if (ch && (!preferEnabled || ch.enabled)) return ch;
+      return state.channels.find((item) => !preferEnabled || item.enabled) || null;
+    }
+
+    function syncRangeInputs() {
+      $("tMinInput").value = state.viewState.tMin;
+      $("tMaxInput").value = state.viewState.tMax;
+      $("vMinInput").value = state.viewState.vMin;
+      $("vMaxInput").value = state.viewState.vMax;
+    }
+
+    function syncHud() {
+      $("appRoot").classList.toggle("focus-workspace", state.focusWorkspace);
+      $("toolbar").style.setProperty("--toolbar-cols", `${state.toolbarWidths[0]}fr 10px ${state.toolbarWidths[1]}fr 10px ${state.toolbarWidths[2]}fr`);
+      $("footerPanel").style.setProperty("--footer-cols", `${state.footerWidths[0]}fr 10px ${state.footerWidths[1]}fr 10px ${state.footerWidths[2]}fr`);
+      const activeChannel = getActiveChannel(false);
+      $("hudActiveChannel").textContent = activeChannel ? activeChannel.name : "未选择";
+      $("hudScope").textContent = state.measurementScope === "view" ? "当前视图" : "全波形";
+      $("scopeBadge").textContent = `测量基于: ${state.measurementScope === "view" ? "当前视图" : "全波形"}`;
+      const tSpan = state.viewState.tMax - state.viewState.tMin;
+      const vSpan = state.viewState.vMax - state.viewState.vMin;
+      $("hudSpan").textContent = `${fmt(tSpan, "s")} / ${fmt(vSpan, "V")}`;
+      const cursor = getSelectedCursorPair();
+      $("hudCursor").textContent = cursor ? `${cursor.id} · ${cursor.kindLabel}` : "无选中游标";
+      $("measurementContext").textContent = activeChannel ? `基于 ${activeChannel.name} · ${state.measurementScope === "view" ? "当前视图" : "全波形"}` : "基于当前主测量通道";
+      $("dataBadge").textContent = state.channels.length ? `${state.channels.filter((ch) => ch.enabled).length}/${state.channels.length} 通道显示中` : "暂无数据";
+      $("xAxisText").textContent = `Time  ${fmt(state.viewState.tMin, "s")} ~ ${fmt(state.viewState.tMax, "s")}`;
+      $("yAxisText").textContent = `Volt  ${fmt(state.viewState.vMin, "V")} ~ ${fmt(state.viewState.vMax, "V")}`;
+      $("btnScopeView").classList.toggle("active", state.measurementScope === "view");
+      $("btnScopeFull").classList.toggle("active", state.measurementScope === "full");
+      $("btnFocusWorkspace").classList.toggle("active", state.focusWorkspace);
+      $("btnFocusWorkspace").textContent = state.focusWorkspace ? "退出专注波形" : "专注波形";
+    }
+
+    function autoscaleView() {
+      const range = getGlobalTimeRange();
+      if (!range) return;
+      state.viewState.tMin = range.t0;
+      state.viewState.tMax = range.t1;
+      let vMin = Infinity;
+      let vMax = -Infinity;
+      for (const ch of state.channels) {
+        if (!ch.enabled) continue;
+        const level = ch.mins.length - 1;
+        const mn = ch.mins[level];
+        const mx = ch.maxs[level];
+        for (let i = 0; i < mn.length; i++) {
+          const a = convertRawToVolt(ch, mn[i]);
+          const b = convertRawToVolt(ch, mx[i]);
+          if (a < vMin) vMin = a;
+          if (b > vMax) vMax = b;
+        }
+      }
+      if (!isFinite(vMin) || !isFinite(vMax) || vMin === vMax) {
+        vMin = -1;
+        vMax = 1;
+      } else {
+        const pad = (vMax - vMin) * 0.08 || 0.5;
+        vMin -= pad;
+        vMax += pad;
+      }
+      state.viewState.vMin = vMin;
+      state.viewState.vMax = vMax;
+      syncRangeInputs();
+      syncHud();
+    }
+
+    function resetView() {
+      state.viewState = { tMin: 0, tMax: 1, vMin: -1, vMax: 1 };
+      const range = getGlobalTimeRange();
+      if (range) {
+        state.viewState.tMin = range.t0;
+        state.viewState.tMax = range.t1;
+      }
+      syncRangeInputs();
+      syncHud();
+      renderAll();
+    }
+
+    function addChannel({ id, name, raw, mins, maxs, meta, format }, options = {}) {
+      const channel = {
+        id,
+        name,
+        displayLabel: `CH${state.channels.length + 1}`,
+        enabled: true,
+        color: pickColor(state.channels.length),
+        yScale: 1,
+        yOffset: 0,
+        raw,
+        mins,
+        maxs,
+        meta,
+        format
+      };
+      state.channels.push(channel);
+      state.importSession.loadedChannels += 1;
+      if (!state.activeMeasurementChannel) state.activeMeasurementChannel = id;
+      if (!options.deferRefresh) {
+        autoscaleView();
+        rebuildChannelList();
+        syncRangeInputs();
+        syncHud();
+        renderAll();
+      }
+    }
+
+    function beginImportSession(totalFiles) {
+      state.importSession = {
+        active: totalFiles > 0,
+        pendingFiles: totalFiles,
+        loadedChannels: 0,
+        failedFiles: 0,
+        startedAt: performance.now()
+      };
+      if (totalFiles > 0) setStatus(`准备读取 ${totalFiles} 个文件...`, "读取中");
+    }
+
+    function finishImportFile(ok, message) {
+      if (!state.importSession.active) {
+        if (message) setStatus(message, ok ? "导入完成" : "解析失败");
+        return;
+      }
+      if (!ok) state.importSession.failedFiles += 1;
+      state.importSession.pendingFiles = Math.max(0, state.importSession.pendingFiles - 1);
+      if (message) {
+        const done = state.importSession.loadedChannels;
+        setStatus(`${message}\n进度: ${done} 通道, 剩余 ${state.importSession.pendingFiles} 文件`, ok ? "处理中" : "解析失败");
+      }
+      if (state.importSession.pendingFiles === 0) {
+        const elapsed = ((performance.now() - state.importSession.startedAt) / 1000).toFixed(2);
+        state.importSession.active = false;
+        autoscaleView();
+        rebuildChannelList();
+        syncRangeInputs();
+        syncHud();
+        renderAll(true);
+        setStatus(
+          `批量导入完成。\n通道数: ${state.channels.length}\n失败文件: ${state.importSession.failedFiles}\n耗时: ${elapsed} s`,
+          "批量导入完成"
+        );
+      }
+    }
+
+    function scheduleTask(fn, delay = 0) {
+      if (window.requestIdleCallback) {
+        return window.requestIdleCallback(fn, { timeout: Math.max(60, delay || 60) });
+      }
+      return window.setTimeout(fn, delay || 0);
+    }
+
+    async function parseKeysightH5File(file) {
+      if (!window.h5wasm || !window.h5wasm.ready) {
+        throw new Error("H5 解析依赖 h5wasm，当前未加载成功。");
+      }
+      const { FS } = await window.h5wasm.ready;
+      const safeName = file.name.replace(/[^a-zA-Z0-9_.-]+/g, "_");
+      const filePath = `/tmp_${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      FS.writeFile(filePath, bytes);
+      let opened = null;
+      let loaded = 0;
+      try {
+        opened = new window.h5wasm.File(filePath, "r");
+        let channelNames = [];
+        try {
+          channelNames = opened.get("Waveforms").keys();
+        } catch (err) {
+          throw new Error("H5 文件中未找到 /Waveforms。");
+        }
+        setStatus(`开始解析 H5: ${file.name}\n发现 ${channelNames.length} 个候选通道`, "H5 解析中");
+        for (const channelName of channelNames) {
+          const groupPath = `Waveforms/${channelName}`;
+          const dataPath = `${groupPath}/${channelName}Data`;
+          let dataset;
+          try {
+            dataset = opened.get(dataPath);
+          } catch (err) {
+            continue;
+          }
+          const rawSource = dataset.value;
+          if (!rawSource || !rawSource.length) continue;
+          const raw = rawSource instanceof Int16Array ? new Int16Array(rawSource) : Int16Array.from(rawSource);
+          const group = opened.get(groupPath);
+          const attrs = group.attrs || {};
+          const numAttr = (key, fallback = 0) => {
+            const value = attrs[key] && attrs[key].value;
+            if (value == null) return fallback;
+            if (Array.isArray(value)) return Number(value[0] ?? fallback);
+            if (ArrayBuffer.isView(value)) return Number(value[0] ?? fallback);
+            return Number(value);
+          };
+          const x_org = numAttr("XOrg", 0);
+          const x_inc = numAttr("XInc", 1);
+          const y_org = numAttr("YOrg", 0);
+          const y_inc = numAttr("YInc", 1);
+          const y_ref = numAttr("YReference", 0);
+          const y_mult = y_inc;
+          const y_zero = y_org - y_ref * y_inc;
+          const pyramid = buildPyramidFromRaw(raw, 8);
+          addChannel({
+            id: `ch${state.nextChannelId++}`,
+            name: `${file.name}:${channelName}`,
+            raw,
+            mins: pyramid.mins,
+            maxs: pyramid.maxs,
+            meta: {
+              headerBytes: 0,
+              npts: raw.length,
+              y_mult,
+              y_zero,
+              x_incr: x_inc,
+              x_zero: x_org,
+              factor: pyramid.factor,
+              levels: pyramid.levels
+            },
+            format: "H5"
+          }, { deferRefresh: state.importSession.active });
+          loaded++;
+          setStatus(`正在解析 H5: ${file.name}\n通道进度: ${loaded}/${channelNames.length}`, "H5 解析中");
+        }
+      } finally {
+        try { if (opened) opened.close(); } catch (err) {}
+        try { FS.unlink(filePath); } catch (err) {}
+      }
+      if (!loaded) throw new Error("H5 中未找到可解析通道（期望 /Waveforms/Channel N/Channel NData）。");
+      finishImportFile(true, `H5 导入完成: ${file.name}\n新增通道: ${loaded}`);
+    }
+
+    function rebuildChannelList() {
+      const list = $("channelList");
+      $("channelCount").textContent = `${state.channels.length} 个通道`;
+      if (!state.channels.length) {
+        list.innerHTML = '<div class="emptyState">导入 `.wfm` 或 `.h5` 后，这里会显示每个通道的可见状态、颜色、垂直缩放和主测量通道设置。</div>';
+        return;
+      }
+      list.innerHTML = state.channels.map((ch) => {
+        const isActive = ch.id === state.activeMeasurementChannel;
+        return `
+          <div class="channelCard ${isActive ? "activeMeasure" : ""}">
+            <div class="channelTop">
+              <div style="display:flex; gap:10px; min-width:0; flex:1 1 auto;">
+                <span class="legendDot" style="color:${ch.color}; background:${ch.color}"></span>
+                <div class="channelName">
+                  <strong title="${escapeHtml(ch.name)}">${escapeHtml(ch.name)}</strong>
+                  <span class="tiny">${ch.format} · ${ch.meta.npts.toLocaleString()} 点 · dt=${fmt(ch.meta.x_incr, "s")}</span>
+                </div>
+              </div>
+              <div class="channelActions">
+                <button class="miniButton" data-action="active" data-id="${ch.id}">${isActive ? "主测量通道" : "设为主测量"}</button>
+                <button class="miniButton" data-action="remove" data-id="${ch.id}">删除</button>
+              </div>
+            </div>
+            <div class="stack">
+              <label class="pill"><input type="checkbox" ${ch.enabled ? "checked" : ""} data-action="toggle" data-id="${ch.id}" /> 显示该通道</label>
+              <label class="pill">颜色 <input type="color" value="${ch.color}" data-action="color" data-id="${ch.id}" /></label>
+            </div>
+            <div class="channelFields">
+              <div class="field">
+                <label for="ys-${ch.id}">Y Scale</label>
+                <input id="ys-${ch.id}" type="number" step="0.001" value="${ch.yScale}" data-action="scale" data-id="${ch.id}" />
+              </div>
+              <div class="field">
+                <label for="yo-${ch.id}">Y Offset (V)</label>
+                <input id="yo-${ch.id}" type="number" step="0.001" value="${ch.yOffset}" data-action="offset" data-id="${ch.id}" />
+              </div>
+              <div class="field">
+                <label for="lb-${ch.id}">左侧标签</label>
+                <input id="lb-${ch.id}" type="text" value="${escapeHtml(ch.displayLabel || "")}" data-action="label" data-id="${ch.id}" />
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+      bindChannelColorInputs();
+    }
+
+    function getMeasurementSampleRange(channel) {
+      if (!channel) return null;
+      if (state.measurementScope === "full") return { i0: 0, i1: channel.meta.npts, reason: "" };
+      const i0 = clamp(Math.floor((state.viewState.tMin - channel.meta.x_zero) / channel.meta.x_incr), 0, channel.meta.npts - 1);
+      const i1 = clamp(Math.ceil((state.viewState.tMax - channel.meta.x_zero) / channel.meta.x_incr), 1, channel.meta.npts);
+      if (i1 <= i0 + 1) return { i0, i1, reason: "当前视图过窄，无法完成稳定测量。" };
+      return { i0, i1, reason: "" };
+    }
+
+    function computeMeasurements(channel) {
+      if (!channel || !channel.enabled) return { ok: false, reason: "没有可用的主测量通道。" };
+      const range = getMeasurementSampleRange(channel);
+      if (!range || range.i1 <= range.i0 + 1) return { ok: false, reason: range ? range.reason : "测量范围无效。" };
+      const maxSamples = 200000;
+      const step = Math.max(1, Math.floor((range.i1 - range.i0) / maxSamples));
+      let vmin = Infinity;
+      let vmax = -Infinity;
+      let vsum = 0;
+      let vsum2 = 0;
+      let n = 0;
+      const ys = [];
+      const ts = [];
+      for (let i = range.i0; i < range.i1; i += step) {
+        const t = channel.meta.x_zero + i * channel.meta.x_incr;
+        const v = convertRawToVolt(channel, channel.raw[i]);
+        ys.push(v);
+        ts.push(t);
+        if (v < vmin) vmin = v;
+        if (v > vmax) vmax = v;
+        vsum += v;
+        vsum2 += v * v;
+        n++;
+      }
+      if (n < 3 || !isFinite(vmin) || !isFinite(vmax)) return { ok: false, reason: "样本不足，无法生成可靠测量值。" };
+      const vpp = vmax - vmin;
+      const vavg = vsum / n;
+      const vrms = Math.sqrt(vsum2 / n);
+      let freq = NaN;
+      let period = NaN;
+      let duty = NaN;
+      let rise = NaN;
+      let fall = NaN;
+      const mid = (vmax + vmin) / 2;
+      const crossings = [];
+      for (let i = 1; i < ys.length; i++) {
+        const a = ys[i - 1] - mid;
+        const b = ys[i] - mid;
+        if (a <= 0 && b > 0) crossings.push(ts[i - 1] + ((0 - a) / (b - a)) * (ts[i] - ts[i - 1]));
+      }
+      if (crossings.length >= 2) {
+        let total = 0;
+        for (let i = 1; i < crossings.length; i++) total += crossings[i] - crossings[i - 1];
+        period = total / (crossings.length - 1);
+        freq = period > 0 ? 1 / period : NaN;
+      }
+      let highTime = 0;
+      let totalTime = 0;
+      for (let i = 1; i < ys.length; i++) {
+        const dt = ts[i] - ts[i - 1];
+        totalTime += dt;
+        if (ys[i] > mid) highTime += dt;
+      }
+      if (totalTime > 0) duty = highTime / totalTime;
+      const v10 = vmin + 0.1 * (vmax - vmin);
+      const v90 = vmin + 0.9 * (vmax - vmin);
+      function edgeTime(low, high, rising) {
+        for (let i = 1; i < ys.length; i++) {
+          const y0 = ys[i - 1];
+          const y1 = ys[i];
+          if (rising && y0 < low && y1 >= low) {
+            const t0 = ts[i - 1] + ((low - y0) / (y1 - y0)) * (ts[i] - ts[i - 1]);
+            for (let j = i; j < ys.length; j++) {
+              const a = ys[j - 1];
+              const b = ys[j];
+              if (a < high && b >= high) return ts[j - 1] + ((high - a) / (b - a)) * (ts[j] - ts[j - 1]) - t0;
+            }
+          }
+          if (!rising && y0 > high && y1 <= high) {
+            const t0 = ts[i - 1] + ((y0 - high) / (y0 - y1)) * (ts[i] - ts[i - 1]);
+            for (let j = i; j < ys.length; j++) {
+              const a = ys[j - 1];
+              const b = ys[j];
+              if (a > low && b <= low) return ts[j - 1] + ((a - low) / (a - b)) * (ts[j] - ts[j - 1]) - t0;
+            }
+          }
+        }
+        return NaN;
+      }
+      rise = edgeTime(v10, v90, true);
+      fall = edgeTime(v10, v90, false);
+      return {
+        ok: true,
+        values: {
+          Vpp: { label: "Vpp", value: fmt(vpp, "V") },
+          Vmax: { label: "Vmax", value: fmt(vmax, "V") },
+          Vmin: { label: "Vmin", value: fmt(vmin, "V") },
+          Vavg: { label: "Vavg", value: fmt(vavg, "V") },
+          Vrms: { label: "Vrms", value: fmt(vrms, "V") },
+          Freq: { label: "Freq", value: fmt(freq, "Hz") },
+          Period: { label: "Period", value: fmt(period, "s") },
+          Duty: { label: "Duty", value: isFinite(duty) ? `${(duty * 100).toFixed(2)} %` : "不可用" },
+          Rise: { label: "Rise(10-90)", value: fmt(rise, "s") },
+          Fall: { label: "Fall(90-10)", value: fmt(fall, "s") }
+        }
+      };
+    }
+
+    function updateMeasurementPanel() {
+      const active = getActiveChannel(true);
+      const box = $("measurementCards");
+      if (!active) {
+        box.innerHTML = '<div class="emptyState">请选择一个已显示的主测量通道，自动测量会固定展示在这里。</div>';
+        state.lastMeasurement = null;
+        return;
+      }
+      const result = computeMeasurements(active);
+      state.lastMeasurement = result;
+      if (!result.ok) {
+        box.innerHTML = `<div class="emptyState">${escapeHtml(result.reason)}</div>`;
+        return;
+      }
+      box.innerHTML = Object.values(result.values).map((item) => `
+        <div class="metricCard">
+          <strong>${item.label}</strong>
+          <span title="${item.value}">${item.value}</span>
+        </div>`).join("");
+    }
+
+    function updateMeasurementPanelAsync() {
+      const taskId = ++state.measurementTaskSeq;
+      const active = getActiveChannel(true);
+      const box = $("measurementCards");
+      if (!active) {
+        box.innerHTML = '<div class="emptyState">请选择一个已显示的主测量通道，自动测量会固定展示在这里。</div>';
+        state.lastMeasurement = null;
+        return;
+      }
+      box.innerHTML = '<div class="emptyState">正在计算自动测量...</div>';
+      scheduleTask(() => {
+        if (taskId !== state.measurementTaskSeq) return;
+        updateMeasurementPanel();
+      }, 24);
+    }
+
+    function makeCursorKindLabel(kind) {
+      return ({ x: "X 游标对", y: "Y 游标对", xy: "XY 游标对", follow: "跟随游标" })[kind] || kind;
+    }
+
+    function createCursorPair(kind) {
+      const channel = getActiveChannel(false) || state.channels[0] || null;
+      if (!channel) {
+        setStatus("请先导入至少一个通道后再添加游标。", "需要数据");
+        return;
+      }
+      const tCenter = (state.viewState.tMin + state.viewState.tMax) / 2;
+      const vCenter = (state.viewState.vMin + state.viewState.vMax) / 2;
+      const tSpan = Math.max(1e-12, state.viewState.tMax - state.viewState.tMin);
+      const vSpan = Math.max(1e-12, state.viewState.vMax - state.viewState.vMin);
+      const color = pickColor(state.cursorPairs.length);
+      const base = { id: `C${state.nextCursorId++}`, kind, kindLabel: makeCursorKindLabel(kind), channelId: channel.id, color };
+      let handles;
+      if (kind === "x") {
+        handles = [
+          { name: "A", t: tCenter - tSpan * 0.12, v: sampleAtTime(channel, tCenter - tSpan * 0.12) },
+          { name: "B", t: tCenter + tSpan * 0.12, v: sampleAtTime(channel, tCenter + tSpan * 0.12) }
+        ];
+      } else if (kind === "y") {
+        handles = [
+          { name: "A", t: tCenter, v: vCenter - vSpan * 0.12 },
+          { name: "B", t: tCenter, v: vCenter + vSpan * 0.12 }
+        ];
+      } else if (kind === "xy") {
+        handles = [
+          { name: "A", t: tCenter - tSpan * 0.1, v: sampleAtTime(channel, tCenter - tSpan * 0.1) },
+          { name: "B", t: tCenter + tSpan * 0.1, v: sampleAtTime(channel, tCenter + tSpan * 0.1) }
+        ];
+      } else {
+        handles = [{ name: "A", t: tCenter, v: sampleAtTime(channel, tCenter) }];
+      }
+      const cursor = { ...base, handles };
+      state.cursorPairs.push(cursor);
+      state.selectedCursor = { id: cursor.id, handleIndex: 0 };
+      syncHud();
+      rebuildCursorTable();
+      updateCursorSummary();
+      renderAll();
+    }
+
+    function getSelectedCursorPair() {
+      if (!state.selectedCursor) return null;
+      return state.cursorPairs.find((pair) => pair.id === state.selectedCursor.id) || null;
+    }
+
+    function getCursorMetrics(pair) {
+      if (!pair) return null;
+      const channel = getChannelById(pair.channelId) || getActiveChannel(false);
+      const a = pair.handles[0] || null;
+      const b = pair.handles[1] || null;
+      const read = (handle) => {
+        if (!handle) return { t: NaN, v: NaN };
+        if (pair.kind === "follow") return { t: handle.t, v: sampleAtTime(channel, handle.t) };
+        if (pair.kind === "x") return { t: handle.t, v: sampleAtTime(channel, handle.t) };
+        return { t: handle.t, v: handle.v };
+      };
+      const p1 = read(a);
+      const p2 = read(b);
+      return { pair, channel, p1, p2, dt: b ? p2.t - p1.t : NaN, invDt: b && p2.t !== p1.t ? 1 / (p2.t - p1.t) : NaN, dv: b ? p2.v - p1.v : NaN };
+    }
+
+    function updateCursorSummary() {
+      const box = $("cursorSummary");
+      const pair = getSelectedCursorPair();
+      if (!pair) {
+        box.innerHTML = '<div class="emptyState">点击顶部工具条添加游标，或直接拖动已存在游标。这里会展示选中游标的实时读数。</div>';
+        return;
+      }
+      const metrics = getCursorMetrics(pair);
+      const lines = [];
+      lines.push(`<div class="summaryLine"><span class="key">游标</span><span>${pair.id} · ${pair.kindLabel}</span></div>`);
+      lines.push(`<div class="summaryLine"><span class="key">通道</span><span>${metrics.channel ? escapeHtml(metrics.channel.name) : "未绑定"}</span></div>`);
+      lines.push(`<div class="summaryLine"><span class="key">T1 / V1</span><span>${fmt(metrics.p1.t, "s")} / ${fmt(metrics.p1.v, "V")}</span></div>`);
+      if (pair.handles[1]) {
+        lines.push(`<div class="summaryLine"><span class="key">T2 / V2</span><span>${fmt(metrics.p2.t, "s")} / ${fmt(metrics.p2.v, "V")}</span></div>`);
+        lines.push(`<div class="summaryLine"><span class="key">ΔT / 1/ΔT</span><span>${fmt(metrics.dt, "s")} / ${fmt(metrics.invDt, "Hz")}</span></div>`);
+        lines.push(`<div class="summaryLine"><span class="key">ΔV</span><span>${fmt(metrics.dv, "V")}</span></div>`);
+      } else {
+        lines.push(`<div class="summaryLine"><span class="key">跟随读数</span><span>${fmt(metrics.p1.t, "s")} / ${fmt(metrics.p1.v, "V")}</span></div>`);
+      }
+      box.innerHTML = lines.join("");
+      $("cursorContext").textContent = `${pair.id} 已选中，可在波形区直接拖动`;
+    }
+
+    function rebuildCursorTable() {
+      const body = $("cursorTableBody");
+      if (!state.cursorPairs.length) {
+        body.innerHTML = '<tr><td colspan="11" class="tiny">暂无游标。使用顶部工具条创建 X / Y / XY / 跟随游标。</td></tr>';
+        return;
+      }
+      body.innerHTML = state.cursorPairs.map((pair) => {
+        const metrics = getCursorMetrics(pair);
+        const selected = state.selectedCursor && state.selectedCursor.id === pair.id;
+        const h0 = metrics.p1;
+        const h1 = metrics.p2;
+        return `
+          <tr class="${selected ? "selected" : ""}" data-cursor-row="${pair.id}">
+            <td>${pair.id}</td>
+            <td>${pair.kindLabel}</td>
+            <td title="${metrics.channel ? escapeHtml(metrics.channel.name) : ""}">${metrics.channel ? escapeHtml(metrics.channel.name) : "-"}</td>
+            <td><input type="color" value="${pair.color}" data-cursor-action="color" data-id="${pair.id}" /></td>
+            <td>${fmt(h0.t, "s")}</td>
+            <td>${h1 ? fmt(h1.t, "s") : "-"}</td>
+            <td>${h1 ? fmt(metrics.dt, "s") : "-"}</td>
+            <td>${fmt(h0.v, "V")}</td>
+            <td>${h1 ? fmt(h1.v, "V") : "-"}</td>
+            <td>${h1 ? fmt(metrics.dv, "V") : "-"}</td>
+            <td><button class="miniButton" data-cursor-action="delete" data-id="${pair.id}">删除</button></td>
+          </tr>`;
+      }).join("");
+      bindCursorColorInputs();
+    }
+
+    function bindChannelColorInputs() {
+      $("channelList").querySelectorAll('input[type="color"][data-action="color"]').forEach((input) => {
+        const apply = () => {
+          const ch = getChannelById(input.getAttribute("data-id"));
+          if (!ch) return;
+          ch.color = input.value;
+          renderAll();
+          setStatus(`已更新通道颜色: ${ch.displayLabel || ch.name}\n当前颜色: ${input.value}`, "颜色已应用");
+        };
+        input.oninput = apply;
+        input.onchange = apply;
+      });
+    }
+
+    function bindCursorColorInputs() {
+      $("cursorTableBody").querySelectorAll('input[type="color"][data-cursor-action="color"]').forEach((input) => {
+        const apply = () => {
+          const pair = state.cursorPairs.find((item) => item.id === input.getAttribute("data-id"));
+          if (!pair) return;
+          pair.color = input.value;
+          renderAll();
+          setStatus(`已更新游标颜色: ${pair.id}\n当前颜色: ${input.value}`, "颜色已应用");
+        };
+        input.oninput = apply;
+        input.onchange = apply;
+      });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function sanitizeName(name) {
+      return name.replace(/[\\/:*?"<>|]+/g, "_").replace(/\s+/g, "_");
+    }
+
+    function exportCSV({ visibleOnly, step }) {
+      const enabledChannels = state.channels.filter((ch) => ch.enabled);
+      if (!enabledChannels.length) {
+        setStatus("没有可导出的已显示通道。", "导出失败");
+        return;
+      }
+      const base = enabledChannels[0];
+      let i0 = 0;
+      let i1 = base.meta.npts;
+      if (visibleOnly) {
+        i0 = clamp(Math.floor((state.viewState.tMin - base.meta.x_zero) / base.meta.x_incr), 0, base.meta.npts - 1);
+        i1 = clamp(Math.ceil((state.viewState.tMax - base.meta.x_zero) / base.meta.x_incr), 1, base.meta.npts);
+      }
+      const header = ["time_s", ...enabledChannels.map((ch) => `${sanitizeName(ch.name)}_V`)];
+      const lines = [header.join(",")];
+      for (let i = i0; i < i1; i += Math.max(1, step)) {
+        const t = base.meta.x_zero + i * base.meta.x_incr;
+        const row = [t];
+        for (const ch of enabledChannels) {
+          const idx = clamp(Math.round((t - ch.meta.x_zero) / ch.meta.x_incr), 0, ch.meta.npts - 1);
+          row.push(convertRawToVolt(ch, ch.raw[idx]));
+        }
+        lines.push(row.join(","));
+      }
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const suffix = visibleOnly ? "visible" : `full_step${Math.max(1, step)}`;
+      downloadBlob(blob, `waveform_export_${suffix}.csv`);
+      setStatus(`CSV 导出完成。\n模式: ${visibleOnly ? "当前视图" : "全量抽点"}\n通道数: ${enabledChannels.length}`, "导出完成");
+    }
+
+    async function handleFiles(files) {
+      if (!files.length) return;
+      beginImportSession(files.length);
+      for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+        const file = files[fileIndex];
+        setStatus(`准备解析文件 ${fileIndex + 1}/${files.length}\n${file.name}`, "读取中");
+        const lower = file.name.toLowerCase();
+        if (lower.endsWith(".h5")) {
+          try {
+            await parseKeysightH5File(file);
+          } catch (err) {
+            finishImportFile(false, `H5 解析失败: ${file.name}\n${String(err)}`);
+          }
+          continue;
+        }
+        const buffer = await file.arrayBuffer();
+        parserWorker.postMessage({ type: "parse", fileId: `ch${state.nextChannelId++}`, name: file.name, buf: buffer }, [buffer]);
+      }
+    }
+
+    parserWorker.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === "error") {
+        finishImportFile(false, `WFM 解析失败: ${msg.fileId}\n${msg.message}`);
+        return;
+      }
+      const raw = new Int16Array(msg.rawBuffer);
+      const mins = [raw];
+      const maxs = [raw];
+      for (let i = 0; i < msg.minBuffers.length; i++) {
+        mins.push(new Int16Array(msg.minBuffers[i]));
+        maxs.push(new Int16Array(msg.maxBuffers[i]));
+      }
+      addChannel({
+        id: msg.fileId,
+        name: msg.name,
+        raw,
+        mins,
+        maxs,
+        meta: {
+          headerBytes: msg.headerBytes,
+          npts: msg.npts,
+          y_mult: msg.y_mult,
+          y_zero: msg.y_zero,
+          x_incr: msg.x_incr,
+          x_zero: msg.x_zero,
+          factor: msg.factor,
+          levels: msg.levels
+        },
+        format: "WFM"
+      }, { deferRefresh: state.importSession.active });
+      finishImportFile(true, `WFM 导入完成: ${msg.name}\n点数: ${msg.npts.toLocaleString()}\n解析已完成，正在刷新视图`);
+    };
+
+    function resizeCanvas() {
+      state.dpr = Math.max(1, window.devicePixelRatio || 1);
+      const rect = plotCanvas.getBoundingClientRect();
+      plotCanvas.width = Math.floor(rect.width * state.dpr);
+      plotCanvas.height = Math.floor(rect.height * state.dpr);
+      overlayCanvas.width = plotCanvas.width;
+      overlayCanvas.height = plotCanvas.height;
+      renderAll();
+    }
+
+    function timeToPx(time) {
+      return ((time - state.viewState.tMin) / (state.viewState.tMax - state.viewState.tMin)) * plotCanvas.width;
+    }
+
+    function voltToPx(volt) {
+      return plotCanvas.height - ((volt - state.viewState.vMin) / (state.viewState.vMax - state.viewState.vMin)) * plotCanvas.height;
+    }
+
+    function pxToTime(px) {
+      return state.viewState.tMin + (px / plotCanvas.width) * (state.viewState.tMax - state.viewState.tMin);
+    }
+
+    function pxToVolt(py) {
+      return state.viewState.vMax - (py / plotCanvas.height) * (state.viewState.vMax - state.viewState.vMin);
+    }
+
+    function chooseLevel(channel, i0, i1) {
+      const width = Math.max(1, plotCanvas.width);
+      const samplesPerPixel = Math.max(1, i1 - i0) / width;
+      let level = 0;
+      let scale = 1;
+      while (level + 1 < channel.mins.length && (samplesPerPixel / scale) > 6) {
+        level++;
+        scale *= channel.meta.factor;
+      }
+      return { level, scale };
+    }
+
+    function drawGrid() {
+      const w = plotCanvas.width;
+      const h = plotCanvas.height;
+      plotCtx.fillStyle = "#050a12";
+      plotCtx.fillRect(0, 0, w, h);
+      plotCtx.save();
+      plotCtx.lineWidth = 1;
+      const cols = 10;
+      const rows = 8;
+      for (let i = 0; i <= cols; i++) {
+        const x = Math.round((i * w) / cols) + 0.5;
+        plotCtx.strokeStyle = i === cols / 2 ? "rgba(110,231,255,.18)" : "rgba(153,196,255,.08)";
+        plotCtx.beginPath();
+        plotCtx.moveTo(x, 0);
+        plotCtx.lineTo(x, h);
+        plotCtx.stroke();
+      }
+      for (let j = 0; j <= rows; j++) {
+        const y = Math.round((j * h) / rows) + 0.5;
+        plotCtx.strokeStyle = j === rows / 2 ? "rgba(134,239,172,.16)" : "rgba(153,196,255,.08)";
+        plotCtx.beginPath();
+        plotCtx.moveTo(0, y);
+        plotCtx.lineTo(w, y);
+        plotCtx.stroke();
+      }
+      plotCtx.restore();
+    }
+
+    function drawWaveforms() {
+      const w = plotCanvas.width;
+      const tMin = state.viewState.tMin;
+      const tMax = state.viewState.tMax;
+      if (tMax <= tMin) return;
+      for (const channel of state.channels) {
+        if (!channel.enabled) continue;
+        const { x_zero, x_incr, npts } = channel.meta;
+        let i0 = Math.floor((tMin - x_zero) / x_incr);
+        let i1 = Math.ceil((tMax - x_zero) / x_incr);
+        i0 = clamp(i0, 0, npts - 1);
+        i1 = clamp(i1, 1, npts);
+        if (i1 <= i0 + 1) continue;
+        const choice = chooseLevel(channel, i0, i1);
+        const mn = channel.mins[choice.level];
+        const mx = channel.maxs[choice.level];
+        const a0 = clamp(Math.floor(i0 / choice.scale), 0, mn.length - 1);
+        const a1 = clamp(Math.ceil(i1 / choice.scale), 1, mn.length);
+        const binDt = choice.scale * channel.meta.x_incr;
+        let bin = a0;
+        let binT = channel.meta.x_zero + bin * binDt;
+        plotCtx.save();
+        plotCtx.strokeStyle = channel.color;
+        plotCtx.lineWidth = 1;
+        plotCtx.globalAlpha = 0.94;
+        for (let px = 0; px < w; px++) {
+          const tt0 = tMin + (px / w) * (tMax - tMin);
+          const tt1 = tMin + ((px + 1) / w) * (tMax - tMin);
+          while (binT + binDt < tt0 && bin < a1 - 1) {
+            bin++;
+            binT += binDt;
+          }
+          if (bin >= a1) break;
+          let localMin = 32767;
+          let localMax = -32768;
+          let b = bin;
+          let bt = binT;
+          while (bt < tt1 && b < a1) {
+            if (mn[b] < localMin) localMin = mn[b];
+            if (mx[b] > localMax) localMax = mx[b];
+            b++;
+            bt += binDt;
+          }
+          if (localMax < localMin) continue;
+          const y1 = voltToPx(convertRawToVolt(channel, localMin));
+          const y2 = voltToPx(convertRawToVolt(channel, localMax));
+          const x = px + 0.5;
+          plotCtx.beginPath();
+          plotCtx.moveTo(x, y1);
+          plotCtx.lineTo(x, y2);
+          plotCtx.stroke();
+        }
+        plotCtx.restore();
+      }
+    }
+
+    function drawChannelTags() {
+      const enabled = state.channels.filter((channel) => channel.enabled);
+      state.channelTagRects = [];
+      if (!enabled.length) return;
+      const tags = enabled.map((channel, index) => {
+        return {
+          channel,
+          text: channel.displayLabel || `CH${index + 1}`,
+          y: clamp(voltToPx(channel.yOffset), 22 * state.dpr, plotCanvas.height - 22 * state.dpr)
+        };
+      }).sort((a, b) => a.y - b.y);
+
+      const minGap = 24 * state.dpr;
+      for (let i = 1; i < tags.length; i++) {
+        if (tags[i].y - tags[i - 1].y < minGap) tags[i].y = tags[i - 1].y + minGap;
+      }
+      for (let i = tags.length - 2; i >= 0; i--) {
+        if (tags[i + 1].y > plotCanvas.height - 22 * state.dpr) tags[i + 1].y = plotCanvas.height - 22 * state.dpr;
+        if (tags[i + 1].y - tags[i].y < minGap) tags[i].y = tags[i + 1].y - minGap;
+      }
+
+      plotCtx.save();
+      plotCtx.font = `${Math.max(11, Math.round(12 * state.dpr))}px "Segoe UI Variable", sans-serif`;
+      for (const tag of tags) {
+        const padX = 10 * state.dpr;
+        const textWidth = plotCtx.measureText(tag.text).width;
+        const bodyW = Math.max(48 * state.dpr, textWidth + padX * 2);
+        const bodyH = 22 * state.dpr;
+        const left = 12 * state.dpr;
+        const top = tag.y - bodyH / 2;
+        const tipX = left + bodyW + 12 * state.dpr;
+        plotCtx.fillStyle = tag.channel.color;
+        plotCtx.beginPath();
+        plotCtx.moveTo(left + 10 * state.dpr, top);
+        plotCtx.lineTo(left + bodyW, top);
+        plotCtx.lineTo(tipX, top + bodyH / 2);
+        plotCtx.lineTo(left + bodyW, top + bodyH);
+        plotCtx.lineTo(left + 10 * state.dpr, top + bodyH);
+        plotCtx.arcTo(left, top + bodyH, left, top + bodyH - 10 * state.dpr, 10 * state.dpr);
+        plotCtx.lineTo(left, top + 10 * state.dpr);
+        plotCtx.arcTo(left, top, left + 10 * state.dpr, top, 10 * state.dpr);
+        plotCtx.closePath();
+        plotCtx.fill();
+        plotCtx.fillStyle = "#06111d";
+        plotCtx.fillText(tag.text, left + padX, top + bodyH - 7 * state.dpr);
+        state.channelTagRects.push({
+          channelId: tag.channel.id,
+          x0: left,
+          y0: top,
+          x1: tipX,
+          y1: top + bodyH
+        });
+      }
+      plotCtx.restore();
+    }
+
+    function hitTestChannelTag(px, py) {
+      for (let i = state.channelTagRects.length - 1; i >= 0; i--) {
+        const rect = state.channelTagRects[i];
+        if (px >= rect.x0 && px <= rect.x1 && py >= rect.y0 && py <= rect.y1) return rect;
+      }
+      return null;
+    }
+
+    function drawHandle(x, y, color, selected) {
+      overlayCtx.save();
+      overlayCtx.fillStyle = "#08101a";
+      overlayCtx.strokeStyle = color;
+      overlayCtx.lineWidth = 2 * state.dpr;
+      const r = (selected ? 7 : 5) * state.dpr;
+      overlayCtx.beginPath();
+      overlayCtx.arc(x, y, r, 0, Math.PI * 2);
+      overlayCtx.fill();
+      overlayCtx.stroke();
+      overlayCtx.restore();
+    }
+
+    function drawTag(x, y, text, color) {
+      overlayCtx.save();
+      overlayCtx.font = `${Math.max(11, Math.round(12 * state.dpr))}px "Segoe UI Variable", sans-serif`;
+      const padX = 8 * state.dpr;
+      const h = 22 * state.dpr;
+      const w = overlayCtx.measureText(text).width + padX * 2;
+      const bx = clamp(x, 6 * state.dpr, overlayCanvas.width - w - 6 * state.dpr);
+      const by = clamp(y, 6 * state.dpr, overlayCanvas.height - h - 6 * state.dpr);
+      overlayCtx.fillStyle = "rgba(6,14,25,.92)";
+      overlayCtx.strokeStyle = color;
+      overlayCtx.lineWidth = 1 * state.dpr;
+      overlayCtx.beginPath();
+      overlayCtx.roundRect(bx, by, w, h, 10 * state.dpr);
+      overlayCtx.fill();
+      overlayCtx.stroke();
+      overlayCtx.fillStyle = "#eef4ff";
+      overlayCtx.fillText(text, bx + padX, by + h - 7 * state.dpr);
+      overlayCtx.restore();
+    }
+
+    function drawCursorPair(pair) {
+      const metrics = getCursorMetrics(pair);
+      const selected = state.selectedCursor && state.selectedCursor.id === pair.id;
+      const color = pair.color;
+      overlayCtx.save();
+      overlayCtx.strokeStyle = color;
+      overlayCtx.lineWidth = selected ? 2.2 * state.dpr : 1.4 * state.dpr;
+      overlayCtx.setLineDash(pair.kind === "follow" ? [8 * state.dpr, 6 * state.dpr] : []);
+      if (pair.kind === "x" || pair.kind === "xy" || pair.kind === "follow") {
+        pair.handles.forEach((handle, index) => {
+          const px = timeToPx(handle.t);
+          overlayCtx.beginPath();
+          overlayCtx.moveTo(px, 0);
+          overlayCtx.lineTo(px, overlayCanvas.height);
+          overlayCtx.stroke();
+          const py = pair.kind === "xy" ? voltToPx(handle.v) : voltToPx(metrics[index === 0 ? "p1" : "p2"].v);
+          drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
+          drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`, color);
+        });
+      }
+      if (pair.kind === "y" || pair.kind === "xy") {
+        pair.handles.forEach((handle, index) => {
+          const py = voltToPx(handle.v);
+          overlayCtx.beginPath();
+          overlayCtx.moveTo(0, py);
+          overlayCtx.lineTo(overlayCanvas.width, py);
+          overlayCtx.stroke();
+          const px = pair.kind === "xy" ? timeToPx(handle.t) : 16 * state.dpr + index * 28 * state.dpr;
+          drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
+          drawTag(18 * state.dpr, py - 10 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.v, "V")}`, color);
+        });
+      }
+      if (pair.handles[1]) {
+        const deltaText = `ΔT ${fmt(metrics.dt, "s")}  ΔV ${fmt(metrics.dv, "V")}`;
+        const midX = timeToPx((metrics.p1.t + metrics.p2.t) / 2);
+        const midY = pair.kind === "y" || pair.kind === "xy" ? voltToPx((pair.handles[0].v + pair.handles[1].v) / 2) : 40 * state.dpr;
+        drawTag(midX + 12 * state.dpr, midY - 12 * state.dpr, deltaText, color);
+      }
+      overlayCtx.restore();
+    }
+
+    function drawOverlay() {
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      if (state.hoverInfo) {
+        overlayCtx.save();
+        overlayCtx.strokeStyle = "rgba(255,255,255,.12)";
+        overlayCtx.lineWidth = 1;
+        overlayCtx.setLineDash([6, 6]);
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(state.hoverInfo.x, 0);
+        overlayCtx.lineTo(state.hoverInfo.x, overlayCanvas.height);
+        overlayCtx.stroke();
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(0, state.hoverInfo.y);
+        overlayCtx.lineTo(overlayCanvas.width, state.hoverInfo.y);
+        overlayCtx.stroke();
+        overlayCtx.restore();
+        const active = getActiveChannel(true);
+        const time = pxToTime(state.hoverInfo.x);
+        const volt = active ? sampleAtTime(active, time) : pxToVolt(state.hoverInfo.y);
+        drawTag(state.hoverInfo.x + 14 * state.dpr, state.hoverInfo.y + 14 * state.dpr, `t ${fmt(time, "s")} | v ${fmt(volt, "V")}`, "#d9f6ff");
+      }
+      if (state.zoomBox) {
+        overlayCtx.save();
+        overlayCtx.fillStyle = "rgba(110,231,255,.10)";
+        overlayCtx.strokeStyle = "rgba(110,231,255,.42)";
+        overlayCtx.lineWidth = 1.5 * state.dpr;
+        const { x0, y0, x1, y1 } = state.zoomBox;
+        overlayCtx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        overlayCtx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+        overlayCtx.restore();
+      }
+      for (const pair of state.cursorPairs) drawCursorPair(pair);
+    }
+
+    function renderPanels() {
+      updateMeasurementPanelAsync();
+      updateCursorSummary();
+      rebuildCursorTable();
+    }
+
+    function schedulePanelRefresh() {
+      if (state.deferredPanelTimer) clearTimeout(state.deferredPanelTimer);
+      state.deferredPanelTimer = setTimeout(() => {
+        state.deferredPanelTimer = 0;
+        renderPanels();
+      }, 16);
+    }
+
+    function renderAll(deferPanels = false) {
+      if (!plotCanvas.width || !plotCanvas.height) return;
+      drawGrid();
+      drawWaveforms();
+      drawChannelTags();
+      drawOverlay();
+      syncHud();
+      if (deferPanels) schedulePanelRefresh();
+      else renderPanels();
+    }
+
+    function hitTestCursor(px, py) {
+      const radius = 10 * state.dpr;
+      for (let i = state.cursorPairs.length - 1; i >= 0; i--) {
+        const pair = state.cursorPairs[i];
+        const metrics = getCursorMetrics(pair);
+        for (let j = 0; j < pair.handles.length; j++) {
+          const handle = pair.handles[j];
+          let hx = timeToPx(handle.t);
+          let hy = 0;
+          if (pair.kind === "x") hy = voltToPx(j === 0 ? metrics.p1.v : metrics.p2.v);
+          else if (pair.kind === "y") { hx = 16 * state.dpr + j * 28 * state.dpr; hy = voltToPx(handle.v); }
+          else if (pair.kind === "xy") { hx = timeToPx(handle.t); hy = voltToPx(handle.v); }
+          else { hx = timeToPx(handle.t); hy = voltToPx(metrics.p1.v); }
+          const dx = px - hx;
+          const dy = py - hy;
+          if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j };
+        }
+      }
+      return null;
+    }
+
+    function setSelectedCursor(pairId, handleIndex = 0) {
+      state.selectedCursor = pairId ? { id: pairId, handleIndex } : null;
+      syncHud();
+      updateCursorSummary();
+      rebuildCursorTable();
+      renderAll();
+    }
+
+    function moveCursorHandle(pair, handleIndex, px, py) {
+      const handle = pair.handles[handleIndex];
+      const channel = getChannelById(pair.channelId) || getActiveChannel(false);
+      const time = pxToTime(clamp(px, 0, overlayCanvas.width));
+      const volt = pxToVolt(clamp(py, 0, overlayCanvas.height));
+      if (pair.kind === "x") {
+        handle.t = time;
+        handle.v = sampleAtTime(channel, time);
+      } else if (pair.kind === "y") {
+        handle.v = volt;
+      } else if (pair.kind === "xy") {
+        handle.t = time;
+        handle.v = volt;
+      } else {
+        handle.t = time;
+        handle.v = sampleAtTime(channel, time);
+      }
+    }
+
+    function removeCursor(id) {
+      state.cursorPairs = state.cursorPairs.filter((pair) => pair.id !== id);
+      if (state.selectedCursor && state.selectedCursor.id === id) state.selectedCursor = null;
+      rebuildCursorTable();
+      updateCursorSummary();
+      syncHud();
+      renderAll();
+    }
+
+    function setToolbarWidths(left, middle, right) {
+      const min = 0.75;
+      const total = Math.max(left + middle + right, 0.001);
+      let next = [left, middle, right].map((v) => v / total * 3.6);
+      next = next.map((v) => Math.max(min, v));
+      const fixedTotal = next[0] + next[1] + next[2];
+      next = next.map((v) => v / fixedTotal * 3.6);
+      state.toolbarWidths = next;
+      syncHud();
+    }
+
+    function setFooterWidths(left, middle, right) {
+      const min = 0.75;
+      const total = Math.max(left + middle + right, 0.001);
+      let next = [left, middle, right].map((v) => v / total * 3.4);
+      next = next.map((v) => Math.max(min, v));
+      const fixedTotal = next[0] + next[1] + next[2];
+      next = next.map((v) => v / fixedTotal * 3.4);
+      state.footerWidths = next;
+      syncHud();
+    }
+
+    function handleChannelFieldEdit(target) {
+      const action = target.getAttribute("data-action");
+      const id = target.getAttribute("data-id");
+      if (!action || !id) return;
+      const ch = getChannelById(id);
+      if (!ch) return;
+
+      if (action === "toggle") ch.enabled = target.checked;
+      if (action === "color") ch.color = target.value;
+      if (action === "scale") ch.yScale = parseFloat(target.value || "1") || 1;
+      if (action === "offset") ch.yOffset = parseFloat(target.value || "0") || 0;
+      if (action === "label") ch.displayLabel = target.value || "";
+
+      renderAll();
+
+      if (action !== "color") rebuildChannelList();
+    }
+
+    function handleCursorFieldEdit(target) {
+      const action = target.getAttribute("data-cursor-action");
+      const id = target.getAttribute("data-id");
+      if (action !== "color" || !id) return;
+      const pair = state.cursorPairs.find((item) => item.id === id);
+      if (!pair) return;
+      pair.color = target.value;
+      renderAll();
+    }
+
+    $("btnOpen").addEventListener("click", () => $("fileInput").click());
+    $("fileInput").addEventListener("change", (e) => handleFiles([...e.target.files]));
+    $("btnFocusWorkspace").addEventListener("click", () => {
+      state.focusWorkspace = !state.focusWorkspace;
+      syncHud();
+      resizeCanvas();
+    });
+    $("btnAuto").addEventListener("click", () => { autoscaleView(); renderAll(); });
+    $("btnReset").addEventListener("click", resetView);
+    $("btnExportVisible").addEventListener("click", () => exportCSV({ visibleOnly: true, step: 1 }));
+    $("btnExportFull").addEventListener("click", () => {
+      const step = parseInt($("exportStep").value || "10", 10);
+      exportCSV({ visibleOnly: false, step: isFinite(step) ? Math.max(1, step) : 10 });
+    });
+    $("btnScopeView").addEventListener("click", () => { state.measurementScope = "view"; renderAll(); });
+    $("btnScopeFull").addEventListener("click", () => { state.measurementScope = "full"; renderAll(); });
+    $("btnApplyRange").addEventListener("click", () => {
+      const tMin = parseFloat($("tMinInput").value);
+      const tMax = parseFloat($("tMaxInput").value);
+      const vMin = parseFloat($("vMinInput").value);
+      const vMax = parseFloat($("vMaxInput").value);
+      if ([tMin, tMax, vMin, vMax].every((v) => isFinite(v)) && tMax > tMin && vMax > vMin) {
+        state.viewState = { tMin, tMax, vMin, vMax };
+        syncHud();
+        renderAll();
+      } else {
+        setStatus("输入范围无效，请确认 tMax > tMin 且 vMax > vMin。", "范围无效");
+      }
+    });
+    $("btnAddX").addEventListener("click", () => createCursorPair("x"));
+    $("btnAddY").addEventListener("click", () => createCursorPair("y"));
+    $("btnAddXY").addEventListener("click", () => createCursorPair("xy"));
+    $("btnAddFollow").addEventListener("click", () => createCursorPair("follow"));
+    $("btnDeleteCursor").addEventListener("click", () => state.selectedCursor && removeCursor(state.selectedCursor.id));
+    $("btnClearCursors").addEventListener("click", () => { state.cursorPairs = []; state.selectedCursor = null; renderAll(); });
+
+    $("toolbar").querySelectorAll(".toolbarResizer").forEach((handle) => {
+      handle.addEventListener("mousedown", (e) => {
+        if (window.innerWidth <= 1500) return;
+        const split = parseInt(handle.getAttribute("data-toolbar-split"), 10);
+        const toolbarRect = $("toolbar").getBoundingClientRect();
+        const totalWidth = toolbarRect.width - 20;
+        const startX = e.clientX;
+        const startWidthsPx = state.toolbarWidths.map((fr) => fr / 3.6 * totalWidth);
+        handle.classList.add("active");
+        state.dragging = {
+          type: "toolbar-resize",
+          split,
+          startX,
+          startWidthsPx
+        };
+      });
+    });
+
+    $("footerPanel").querySelectorAll(".footerResizer").forEach((handle) => {
+      handle.addEventListener("mousedown", (e) => {
+        if (window.innerWidth <= 1500) return;
+        const split = parseInt(handle.getAttribute("data-footer-split"), 10);
+        const panelRect = $("footerPanel").getBoundingClientRect();
+        const totalWidth = panelRect.width - 20;
+        const startX = e.clientX;
+        const startWidthsPx = state.footerWidths.map((fr) => fr / 3.4 * totalWidth);
+        handle.classList.add("active");
+        state.dragging = {
+          type: "footer-resize",
+          split,
+          startX,
+          startWidthsPx
+        };
+      });
+    });
+
+    $("channelList").addEventListener("input", (e) => handleChannelFieldEdit(e.target));
+    $("channelList").addEventListener("change", (e) => handleChannelFieldEdit(e.target));
+
+    $("channelList").addEventListener("click", (e) => {
+      const action = e.target.getAttribute("data-action");
+      const id = e.target.getAttribute("data-id");
+      if (!action || !id) return;
+      const ch = getChannelById(id);
+      if (!ch) return;
+      if (action === "active") state.activeMeasurementChannel = id;
+      else if (action === "remove") {
+        state.channels = state.channels.filter((item) => item.id !== id);
+        state.cursorPairs = state.cursorPairs.filter((pair) => pair.channelId !== id);
+        if (state.activeMeasurementChannel === id) state.activeMeasurementChannel = state.channels[0] ? state.channels[0].id : null;
+        if (state.selectedCursor && !state.cursorPairs.find((pair) => pair.id === state.selectedCursor.id)) state.selectedCursor = null;
+        if (!state.channels.length) state.viewState = { tMin: 0, tMax: 1, vMin: -1, vMax: 1 };
+        else autoscaleView();
+      }
+      rebuildChannelList();
+      renderAll();
+    });
+
+    $("cursorTableBody").addEventListener("click", (e) => {
+      const action = e.target.getAttribute("data-cursor-action");
+      const id = e.target.getAttribute("data-id");
+      if (action === "delete" && id) {
+        removeCursor(id);
+        return;
+      }
+      const row = e.target.closest("[data-cursor-row]");
+      if (row) setSelectedCursor(row.getAttribute("data-cursor-row"));
+    });
+
+    $("cursorTableBody").addEventListener("input", (e) => handleCursorFieldEdit(e.target));
+    $("cursorTableBody").addEventListener("change", (e) => handleCursorFieldEdit(e.target));
+
+    overlayCanvas.addEventListener("mousedown", (e) => {
+      if (!state.channels.length) return;
+      const rect = overlayCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * state.dpr;
+      const y = (e.clientY - rect.top) * state.dpr;
+      const hitTag = hitTestChannelTag(x, y);
+      if (hitTag) {
+        const ch = getChannelById(hitTag.channelId);
+        if (ch) {
+          state.dragging = { type: "tag-offset", channelId: ch.id, startY: y, startOffset: ch.yOffset };
+          setStatus(`拖动 ${ch.displayLabel || ch.name} 左侧标签可调整 Y Offset`, "调整 Offset");
+          return;
+        }
+      }
+      const hit = hitTestCursor(x, y);
+      if (hit) {
+        state.dragging = { type: "cursor", pairId: hit.pairId, handleIndex: hit.handleIndex };
+        setSelectedCursor(hit.pairId, hit.handleIndex);
+        return;
+      }
+      state.dragging = { type: e.shiftKey ? "box" : "pan", startX: x, startY: y, view: { ...state.viewState } };
+      if (state.dragging.type === "box") state.zoomBox = { x0: x, y0: y, x1: x, y1: y };
+    });
+
+    overlayCanvas.addEventListener("mousemove", (e) => {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * state.dpr;
+      const y = (e.clientY - rect.top) * state.dpr;
+      state.hoverInfo = { x, y };
+      if (state.dragging) {
+        if (state.dragging.type === "tag-offset") {
+          const ch = getChannelById(state.dragging.channelId);
+          if (ch) {
+            const deltaVolt = pxToVolt(y) - pxToVolt(state.dragging.startY);
+            ch.yOffset = state.dragging.startOffset + deltaVolt;
+            renderAll();
+          }
+          return;
+        }
+        if (state.dragging.type === "cursor") {
+          const pair = state.cursorPairs.find((item) => item.id === state.dragging.pairId);
+          if (pair) moveCursorHandle(pair, state.dragging.handleIndex, x, y);
+          renderAll();
+          return;
+        }
+        if (state.dragging.type === "pan") {
+          const dx = x - state.dragging.startX;
+          const dy = y - state.dragging.startY;
+          const dt = -(dx / overlayCanvas.width) * (state.dragging.view.tMax - state.dragging.view.tMin);
+          const dv = (dy / overlayCanvas.height) * (state.dragging.view.vMax - state.dragging.view.vMin);
+          state.viewState.tMin = state.dragging.view.tMin + dt;
+          state.viewState.tMax = state.dragging.view.tMax + dt;
+          state.viewState.vMin = state.dragging.view.vMin + dv;
+          state.viewState.vMax = state.dragging.view.vMax + dv;
+          syncRangeInputs();
+          renderAll();
+          return;
+        }
+        if (state.dragging.type === "box" && state.zoomBox) {
+          state.zoomBox.x1 = x;
+          state.zoomBox.y1 = y;
+          drawOverlay();
+          return;
+        }
+      }
+      drawOverlay();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!state.dragging) return;
+      if (state.dragging.type === "toolbar-resize") {
+        const delta = e.clientX - state.dragging.startX;
+        const widths = [...state.dragging.startWidthsPx];
+        if (state.dragging.split === 0) {
+          widths[0] += delta;
+          widths[1] -= delta;
+        } else {
+          widths[1] += delta;
+          widths[2] -= delta;
+        }
+        setToolbarWidths(widths[0], widths[1], widths[2]);
+      } else if (state.dragging.type === "footer-resize") {
+        const delta = e.clientX - state.dragging.startX;
+        const widths = [...state.dragging.startWidthsPx];
+        if (state.dragging.split === 0) {
+          widths[0] += delta;
+          widths[1] -= delta;
+        } else {
+          widths[1] += delta;
+          widths[2] -= delta;
+        }
+        setFooterWidths(widths[0], widths[1], widths[2]);
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!state.dragging) return;
+      if (state.dragging.type === "toolbar-resize") {
+        $("toolbar").querySelectorAll(".toolbarResizer").forEach((el) => el.classList.remove("active"));
+      } else if (state.dragging.type === "footer-resize") {
+        $("footerPanel").querySelectorAll(".footerResizer").forEach((el) => el.classList.remove("active"));
+      }
+      if (state.dragging.type === "tag-offset") rebuildChannelList();
+      if (state.dragging.type === "box" && state.zoomBox) {
+        const x0 = Math.min(state.zoomBox.x0, state.zoomBox.x1);
+        const x1 = Math.max(state.zoomBox.x0, state.zoomBox.x1);
+        const y0 = Math.min(state.zoomBox.y0, state.zoomBox.y1);
+        const y1 = Math.max(state.zoomBox.y0, state.zoomBox.y1);
+        if (x1 - x0 > 8 * state.dpr && y1 - y0 > 8 * state.dpr) {
+          state.viewState.tMin = pxToTime(x0);
+          state.viewState.tMax = pxToTime(x1);
+          state.viewState.vMax = pxToVolt(y0);
+          state.viewState.vMin = pxToVolt(y1);
+          syncRangeInputs();
+        }
+      }
+      state.dragging = null;
+      state.zoomBox = null;
+      renderAll();
+    });
+
+    overlayCanvas.addEventListener("mouseleave", () => {
+      if (!state.dragging) {
+        state.hoverInfo = null;
+        drawOverlay();
+      }
+    });
+
+    overlayCanvas.addEventListener("dblclick", () => {
+      autoscaleView();
+      renderAll();
+    });
+
+    overlayCanvas.addEventListener("wheel", (e) => {
+      if (!state.channels.length) return;
+      e.preventDefault();
+      const rect = overlayCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * state.dpr;
+      const y = (e.clientY - rect.top) * state.dpr;
+      const focusT = pxToTime(x);
+      const focusV = pxToVolt(y);
+      const factor = e.deltaY < 0 ? 0.88 : 1.14;
+      if (e.shiftKey) {
+        const span = (state.viewState.vMax - state.viewState.vMin) * factor;
+        state.viewState.vMin = focusV - (focusV - state.viewState.vMin) * factor;
+        state.viewState.vMax = state.viewState.vMin + span;
+      } else {
+        const span = (state.viewState.tMax - state.viewState.tMin) * factor;
+        state.viewState.tMin = focusT - (focusT - state.viewState.tMin) * factor;
+        state.viewState.tMax = state.viewState.tMin + span;
+      }
+      syncRangeInputs();
+      renderAll();
+    }, { passive: false });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    syncRangeInputs();
+    rebuildChannelList();
+    rebuildCursorTable();
+    updateCursorSummary();
+    syncHud();
+    setStatus("等待导入波形文件。\n支持 Tektronix WFM#003 与 Keysight H5。", "待机");
+  </script>
+</body>
+</html>
