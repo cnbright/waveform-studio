@@ -1615,8 +1615,8 @@ self.onmessage = (e) => {
           overlayCtx.lineTo(overlayCanvas.width, py);
           overlayCtx.stroke();
           const px = pair.kind === "xy" ? timeToPx(handle.t) : 16 * state.dpr + index * 28 * state.dpr;
-          drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
           drawTag(18 * state.dpr, py - 10 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.v, "V")}`, color);
+          drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
         });
       }
       if (pair.handles[1]) {
@@ -1689,6 +1689,7 @@ self.onmessage = (e) => {
 
     function hitTestCursor(px, py) {
       const radius = 10 * state.dpr;
+      const lineRadius = 6 * state.dpr;
       for (let i = state.cursorPairs.length - 1; i >= 0; i--) {
         const pair = state.cursorPairs[i];
         const metrics = getCursorMetrics(pair);
@@ -1703,6 +1704,7 @@ self.onmessage = (e) => {
           const dx = px - hx;
           const dy = py - hy;
           if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j };
+          if (pair.kind === "y" && Math.abs(dy) <= lineRadius) return { pairId: pair.id, handleIndex: j };
         }
       }
       return null;
@@ -1976,7 +1978,8 @@ self.onmessage = (e) => {
       const { x, y } = overlayPointFromMouseEvent(e);
       state.hoverInfo = { x, y };
       const hitTag = hitTestChannelTag(x, y);
-      overlayCanvas.style.cursor = hitTag ? "ns-resize" : "";
+      const hitCursor = hitTestCursor(x, y);
+      overlayCanvas.style.cursor = hitTag || hitCursor ? "ns-resize" : "";
       if (updateCanvasDrag(x, y)) {
         e.preventDefault();
         return;
