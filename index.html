@@ -16,6 +16,7 @@
       --shadow:0 18px 48px rgba(1,7,18,.42);
       --toolbar-cols:1.6fr 10px 1fr 10px 1fr;
       --footer-cols:1.2fr 10px 1fr 10px 1.2fr;
+      --footer-height:24vh;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -70,12 +71,12 @@
       padding:0;
       border-radius:8px;
     }
-    .app{display:grid;grid-template-rows:auto minmax(520px,1fr) minmax(180px,24vh);height:100%;gap:12px;padding:12px}
+    .app{display:grid;grid-template-rows:auto minmax(360px,1fr) 10px minmax(120px,var(--footer-height));height:100%;gap:8px;padding:12px}
     body::-webkit-scrollbar,
     .sidebar::-webkit-scrollbar,
     .footerPanel::-webkit-scrollbar,
-    .footerBlock::-webkit-scrollbar,
     .metricGrid::-webkit-scrollbar,
+    .cursorSummary::-webkit-scrollbar,
     .cursorTableWrap::-webkit-scrollbar{
       width:12px;
       height:12px;
@@ -83,8 +84,8 @@
     body::-webkit-scrollbar-track,
     .sidebar::-webkit-scrollbar-track,
     .footerPanel::-webkit-scrollbar-track,
-    .footerBlock::-webkit-scrollbar-track,
     .metricGrid::-webkit-scrollbar-track,
+    .cursorSummary::-webkit-scrollbar-track,
     .cursorTableWrap::-webkit-scrollbar-track{
       background:rgba(8,17,29,.9);
       border-radius:999px;
@@ -93,8 +94,8 @@
     body::-webkit-scrollbar-thumb,
     .sidebar::-webkit-scrollbar-thumb,
     .footerPanel::-webkit-scrollbar-thumb,
-    .footerBlock::-webkit-scrollbar-thumb,
     .metricGrid::-webkit-scrollbar-thumb,
+    .cursorSummary::-webkit-scrollbar-thumb,
     .cursorTableWrap::-webkit-scrollbar-thumb{
       background:linear-gradient(180deg, rgba(110,231,255,.58), rgba(56,189,248,.34));
       border-radius:999px;
@@ -104,8 +105,8 @@
     body::-webkit-scrollbar-thumb:hover,
     .sidebar::-webkit-scrollbar-thumb:hover,
     .footerPanel::-webkit-scrollbar-thumb:hover,
-    .footerBlock::-webkit-scrollbar-thumb:hover,
     .metricGrid::-webkit-scrollbar-thumb:hover,
+    .cursorSummary::-webkit-scrollbar-thumb:hover,
     .cursorTableWrap::-webkit-scrollbar-thumb:hover{
       background:linear-gradient(180deg, rgba(110,231,255,.72), rgba(56,189,248,.46));
     }
@@ -147,7 +148,7 @@
     .toolbarRow .grow{flex:1 1 180px}
     .toolbarRow .rangeField{display:grid;gap:6px;min-width:110px;flex:1 1 120px}
     .toolbarRow .rangeField label,.field label{font-size:11px;color:var(--muted)}
-    .workspace{min-height:520px;display:grid;grid-template-columns:280px 1fr;gap:12px}
+    .workspace{min-height:360px;display:grid;grid-template-columns:280px 1fr;gap:12px}
     .sidebar{padding:14px;overflow:auto}
     .sectionHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
     .sectionHeader h2{margin:0;font-size:15px;font-weight:700}
@@ -174,7 +175,7 @@
     .legendDot{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:0 0 12px currentColor;margin-top:3px;flex:0 0 auto}
     .statusCard{margin-top:14px;border:1px dashed var(--line);border-radius:16px;padding:12px;background:rgba(7,14,24,.52)}
     .statusCard pre{margin:0;white-space:pre-wrap;color:#c5d3e6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5}
-    .stage{padding:10px;display:grid;grid-template-rows:auto minmax(360px,1fr);gap:10px;overflow:hidden}
+    .stage{padding:10px;display:grid;grid-template-rows:auto minmax(320px,1fr);gap:10px;overflow:hidden}
     .stageTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:2px 4px 0}
     .heroTitle{display:grid;gap:5px}
     .heroTitle h1{margin:0;font-size:20px;letter-spacing:.01em}
@@ -192,7 +193,7 @@
       position:relative;
       min-height:0;
       height:100%;
-      min-height:360px;
+      min-height:320px;
       border-radius:18px;
       overflow:hidden;
       background:
@@ -225,7 +226,32 @@
     .axisPill.x{left:14px;bottom:12px}
     .axisPill.y{right:14px;bottom:12px}
     .footerPanel{display:grid;grid-template-columns:var(--footer-cols);gap:0;padding:12px;overflow:auto;max-height:100%}
-    .app.focus-workspace{grid-template-rows:auto minmax(620px,1fr) minmax(108px,14vh)}
+    .footerHeightResizer{
+      position:relative;
+      min-height:10px;
+      cursor:row-resize;
+      user-select:none;
+      touch-action:none;
+      z-index:3;
+    }
+    .footerHeightResizer::before{
+      content:"";
+      position:absolute;
+      left:18px;
+      right:18px;
+      top:50%;
+      height:2px;
+      transform:translateY(-50%);
+      border-radius:999px;
+      background:linear-gradient(90deg, rgba(153,196,255,.08), rgba(110,231,255,.42), rgba(153,196,255,.08));
+      box-shadow:0 0 12px rgba(110,231,255,.14);
+    }
+    .footerHeightResizer:hover::before,
+    .footerHeightResizer.active::before{
+      height:3px;
+      background:linear-gradient(90deg, rgba(110,231,255,.22), rgba(110,231,255,.78), rgba(110,231,255,.22));
+    }
+    .app.focus-workspace{--footer-height:14vh;grid-template-rows:auto minmax(420px,1fr) 10px minmax(108px,var(--footer-height))}
     .app.focus-workspace .toolbar{gap:0}
     .app.focus-workspace .toolbarSection{padding:6px 8px;border-radius:14px}
     .app.focus-workspace .toolbarTitle{font-size:9px;margin-bottom:2px;letter-spacing:.05em}
@@ -240,8 +266,8 @@
     .app.focus-workspace .toolbarSection:nth-child(3) .toolbarRow.compact{margin-bottom:4px}
     .app.focus-workspace .toolbarSection:nth-child(3) .toolbarRow:last-child{align-items:end}
     .app.focus-workspace .toolbarResizer::before{top:6px;bottom:6px}
-    .app.focus-workspace .workspace{grid-template-columns:220px 1fr;min-height:620px}
-    .app.focus-workspace .stage{padding:8px;grid-template-rows:auto minmax(520px,1fr);gap:8px}
+    .app.focus-workspace .workspace{grid-template-columns:220px 1fr;min-height:420px}
+    .app.focus-workspace .stage{padding:8px;grid-template-rows:auto minmax(420px,1fr);gap:8px}
     .app.focus-workspace .stageTop{padding:0;gap:6px;align-items:center}
     .app.focus-workspace .heroTitle{gap:2px}
     .app.focus-workspace .heroTitle h1{font-size:14px}
@@ -250,7 +276,7 @@
     .app.focus-workspace .hudCard{padding:6px 8px;gap:2px}
     .app.focus-workspace .hudCard .label{font-size:10px}
     .app.focus-workspace .hudCard .value{font-size:12px}
-    .app.focus-workspace .plotShell{min-height:520px}
+    .app.focus-workspace .plotShell{min-height:420px}
     .app.focus-workspace .footerPanel{opacity:.88}
     .app.focus-workspace .footerBlock{padding:8px;gap:6px}
     .app.focus-workspace .metricCard,
@@ -285,22 +311,24 @@
       background:rgba(7,14,24,.54);
       padding:12px;
       display:grid;
+      grid-template-rows:auto minmax(0, 1fr);
       gap:10px;
-      overflow:auto;
+      overflow:hidden;
     }
-    .footerBlockHeader{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .footerBlockHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
     .footerBlockHeader h3{margin:0;font-size:14px}
-    .footerBlockHeader span{font-size:12px;color:var(--muted)}
-    .metricGrid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;align-content:start;overflow:auto;min-height:0}
+    .footerBlockHeader span{font-size:12px;color:var(--muted);white-space:nowrap}
+    .metricGrid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;align-content:start;overflow:auto;min-height:0;padding-right:2px}
     .metricCard{padding:10px;display:grid;gap:4px;min-width:0}
-    .cursorSummary{display:grid;gap:8px;align-content:start}
+    .cursorSummary{display:grid;gap:8px;align-content:start;overflow:auto;min-height:0;padding-right:2px}
     .summaryLine{padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-size:13px}
     .summaryLine .key{color:var(--muted)}
-    .cursorTableWrap{overflow:auto;border-radius:14px;border:1px solid rgba(153,196,255,.12);background:rgba(9,18,31,.62)}
+    .cursorTableWrap{overflow:auto;min-height:0;border-radius:14px;border:1px solid rgba(153,196,255,.12);background:rgba(9,18,31,.62)}
     table{border-collapse:collapse;width:100%;min-width:560px}
     th,td{padding:10px;border-bottom:1px solid rgba(153,196,255,.08);text-align:left;font-size:12px;white-space:nowrap}
     th{position:sticky;top:0;background:rgba(9,18,31,.96);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
     tr.selected{background:rgba(110,231,255,.10)}
+    .cursorChannelSelect{min-width:160px;padding:6px 28px 6px 9px;border-radius:9px;font-size:12px;background:rgba(6,14,25,.88)}
     .emptyState{border:1px dashed rgba(153,196,255,.16);border-radius:16px;padding:18px;color:var(--muted);line-height:1.55;font-size:13px}
     .miniButton{padding:6px 8px;border-radius:10px;font-size:12px}
     #fileInput{display:none}
@@ -312,7 +340,8 @@
       .hudGrid{grid-template-columns:repeat(2, minmax(140px,1fr))}
     }
     @media (max-width: 1080px){
-      .app{grid-template-rows:auto auto auto}
+      .app{grid-template-rows:auto auto 10px auto}
+      .footerHeightResizer{display:none}
       .workspace{grid-template-columns:1fr}
       .sidebar{max-height:36vh}
       .stage{min-height:46vh}
@@ -450,6 +479,8 @@
       </section>
     </section>
 
+    <div class="footerHeightResizer" id="footerHeightResizer" title="拖动调整底部面板高度"></div>
+
     <section class="footerPanel" id="footerPanel">
       <div class="footerBlock">
         <div class="footerBlockHeader">
@@ -510,6 +541,7 @@
       focusWorkspace: false,
       toolbarWidths: [1.6, 1, 1],
       footerWidths: [1.2, 1, 1.2],
+      footerHeight: null,
       channelTagRects: [],
       importSession: { active: false, pendingFiles: 0, loadedChannels: 0, failedFiles: 0, startedAt: 0 },
       deferredPanelTimer: 0,
@@ -717,6 +749,7 @@ self.onmessage = (e) => {
       $("appRoot").classList.toggle("focus-workspace", state.focusWorkspace);
       $("toolbar").style.setProperty("--toolbar-cols", `${state.toolbarWidths[0]}fr 10px ${state.toolbarWidths[1]}fr 10px ${state.toolbarWidths[2]}fr`);
       $("footerPanel").style.setProperty("--footer-cols", `${state.footerWidths[0]}fr 10px ${state.footerWidths[1]}fr 10px ${state.footerWidths[2]}fr`);
+      if (state.footerHeight) $("appRoot").style.setProperty("--footer-height", `${state.footerHeight}px`);
       const activeChannel = getActiveChannel(false);
       $("hudActiveChannel").textContent = activeChannel ? activeChannel.name : "未选择";
       $("hudScope").textContent = state.measurementScope === "view" ? "当前视图" : "全波形";
@@ -1188,6 +1221,23 @@ self.onmessage = (e) => {
       return { pair, channel, p1, p2, dt: b ? p2.t - p1.t : NaN, invDt: b && p2.t !== p1.t ? 1 / (p2.t - p1.t) : NaN, dv: b ? p2.v - p1.v : NaN };
     }
 
+    function resampleCursorForChannel(pair, channel) {
+      if (!pair || !channel) return;
+      if (pair.kind !== "x" && pair.kind !== "follow") return;
+      pair.handles.forEach((handle) => {
+        handle.v = sampleAtTime(channel, handle.t, false);
+      });
+    }
+
+    function buildCursorChannelSelect(pair, activeChannel) {
+      const selectedId = activeChannel ? activeChannel.id : pair.channelId;
+      const options = state.channels.map((channel) => {
+        const label = channel.displayLabel || channel.name;
+        return `<option value="${escapeHtml(channel.id)}" ${channel.id === selectedId ? "selected" : ""}>${escapeHtml(label)}</option>`;
+      }).join("");
+      return `<select class="cursorChannelSelect" data-cursor-action="channel" data-id="${pair.id}" title="选择此游标作用的通道">${options}</select>`;
+    }
+
     function updateCursorSummary() {
       const box = $("cursorSummary");
       const pair = getSelectedCursorPair();
@@ -1226,7 +1276,7 @@ self.onmessage = (e) => {
           <tr class="${selected ? "selected" : ""}" data-cursor-row="${pair.id}">
             <td>${pair.id}</td>
             <td>${pair.kindLabel}</td>
-            <td title="${metrics.channel ? escapeHtml(metrics.channel.name) : ""}">${metrics.channel ? escapeHtml(metrics.channel.name) : "-"}</td>
+            <td>${buildCursorChannelSelect(pair, metrics.channel)}</td>
             <td><input type="color" value="${pair.color}" data-cursor-action="color" data-id="${pair.id}" /></td>
             <td>${fmt(h0.t, "s")}</td>
             <td>${h1 ? fmt(h1.t, "s") : "-"}</td>
@@ -1815,6 +1865,27 @@ self.onmessage = (e) => {
       syncHud();
     }
 
+    function getFooterHeightBounds() {
+      const appRoot = $("appRoot");
+      const appRect = appRoot.getBoundingClientRect();
+      const appStyle = getComputedStyle(appRoot);
+      const toolbarRect = $("toolbar").getBoundingClientRect();
+      const handleRect = $("footerHeightResizer").getBoundingClientRect();
+      const verticalPadding = (parseFloat(appStyle.paddingTop) || 0) + (parseFloat(appStyle.paddingBottom) || 0);
+      const verticalGaps = (parseFloat(appStyle.rowGap) || 0) * 3;
+      const min = window.innerWidth <= 1500 ? 108 : 120;
+      const workspaceReserve = state.focusWorkspace ? 420 : 360;
+      const max = Math.max(min, appRect.height - verticalPadding - verticalGaps - toolbarRect.height - handleRect.height - workspaceReserve);
+      return { min, max };
+    }
+
+    function setFooterHeight(height) {
+      const bounds = getFooterHeightBounds();
+      state.footerHeight = clamp(height, bounds.min, bounds.max);
+      syncHud();
+      resizeCanvas();
+    }
+
     function handleChannelFieldEdit(target) {
       const action = target.getAttribute("data-action");
       const id = target.getAttribute("data-id");
@@ -1836,10 +1907,26 @@ self.onmessage = (e) => {
     function handleCursorFieldEdit(target) {
       const action = target.getAttribute("data-cursor-action");
       const id = target.getAttribute("data-id");
-      if (action !== "color" || !id) return;
+      if (!action || !id) return;
       const pair = state.cursorPairs.find((item) => item.id === id);
       if (!pair) return;
-      pair.color = target.value;
+      if (action === "color") {
+        pair.color = target.value;
+      } else if (action === "channel") {
+        const channel = getChannelById(target.value);
+        if (!channel) return;
+        pair.channelId = channel.id;
+        resampleCursorForChannel(pair, channel);
+        if (!state.selectedCursor || state.selectedCursor.id !== pair.id) {
+          state.selectedCursor = { id: pair.id, handleIndex: 0 };
+        }
+        setStatus(`已将游标 ${pair.id} 作用通道切换为 ${channel.displayLabel || channel.name}`, "游标通道");
+      } else {
+        return;
+      }
+      updateCursorSummary();
+      rebuildCursorTable();
+      syncHud();
       renderAll();
     }
 
@@ -1915,6 +2002,19 @@ self.onmessage = (e) => {
       });
     });
 
+    $("footerHeightResizer").addEventListener("mousedown", (e) => {
+      if (window.innerWidth <= 1080) return;
+      const footerRect = $("footerPanel").getBoundingClientRect();
+      $("footerHeightResizer").classList.add("active");
+      document.body.style.cursor = "row-resize";
+      state.dragging = {
+        type: "footer-height-resize",
+        startY: e.clientY,
+        startHeight: footerRect.height
+      };
+      e.preventDefault();
+    });
+
     $("channelList").addEventListener("input", (e) => handleChannelFieldEdit(e.target));
     $("channelList").addEventListener("change", (e) => handleChannelFieldEdit(e.target));
 
@@ -1944,6 +2044,7 @@ self.onmessage = (e) => {
         removeCursor(id);
         return;
       }
+      if (e.target.closest("select,input,button")) return;
       const row = e.target.closest("[data-cursor-row]");
       if (row) setSelectedCursor(row.getAttribute("data-cursor-row"));
     });
@@ -2011,6 +2112,9 @@ self.onmessage = (e) => {
           widths[2] -= delta;
         }
         setFooterWidths(widths[0], widths[1], widths[2]);
+      } else if (state.dragging.type === "footer-height-resize") {
+        const delta = e.clientY - state.dragging.startY;
+        setFooterHeight(state.dragging.startHeight - delta);
       } else if (e.target !== overlayCanvas) {
         const { x, y } = overlayPointFromMouseEvent(e);
         updateCanvasDrag(x, y);
@@ -2023,6 +2127,9 @@ self.onmessage = (e) => {
         $("toolbar").querySelectorAll(".toolbarResizer").forEach((el) => el.classList.remove("active"));
       } else if (state.dragging.type === "footer-resize") {
         $("footerPanel").querySelectorAll(".footerResizer").forEach((el) => el.classList.remove("active"));
+      } else if (state.dragging.type === "footer-height-resize") {
+        $("footerHeightResizer").classList.remove("active");
+        document.body.style.cursor = "";
       }
       if (state.dragging.type === "tag-offset") rebuildChannelList();
       if (state.dragging.type === "box" && state.zoomBox) {
@@ -2078,7 +2185,10 @@ self.onmessage = (e) => {
       renderAll();
     }, { passive: false });
 
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", () => {
+      if (state.footerHeight) setFooterHeight(state.footerHeight);
+      else resizeCanvas();
+    });
 
     resizeCanvas();
     syncRangeInputs();
