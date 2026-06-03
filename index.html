@@ -728,6 +728,14 @@ self.onmessage = (e) => {
       return includeOffset ? convertRawToDisplayVolt(channel, channel.raw[idx]) : convertRawToSignalVolt(channel, channel.raw[idx]);
     }
 
+    function signalToDisplayVolt(channel, volt) {
+      return volt + (channel ? channel.yOffset : 0);
+    }
+
+    function displayToSignalVolt(channel, volt) {
+      return volt - (channel ? channel.yOffset : 0);
+    }
+
     function getChannelById(id) {
       return state.channels.find((ch) => ch.id === id) || null;
     }
@@ -1178,8 +1186,8 @@ self.onmessage = (e) => {
         ];
       } else if (kind === "y") {
         handles = [
-          { name: "A", t: tCenter, v: vCenter - vSpan * 0.12 },
-          { name: "B", t: tCenter, v: vCenter + vSpan * 0.12 }
+          { name: "A", t: tCenter, v: displayToSignalVolt(channel, vCenter - vSpan * 0.12) },
+          { name: "B", t: tCenter, v: displayToSignalVolt(channel, vCenter + vSpan * 0.12) }
         ];
       } else if (kind === "xy") {
         handles = [
@@ -1212,9 +1220,9 @@ self.onmessage = (e) => {
         if (!handle) return { t: NaN, v: NaN, displayV: NaN };
         if (pair.kind === "follow" || pair.kind === "x") {
           const signalV = sampleAtTime(channel, handle.t, false);
-          return { t: handle.t, v: signalV, displayV: signalV + (channel ? channel.yOffset : 0) };
+          return { t: handle.t, v: signalV, displayV: signalToDisplayVolt(channel, signalV) };
         }
-        return { t: handle.t, v: handle.v, displayV: handle.v };
+        return { t: handle.t, v: handle.v, displayV: signalToDisplayVolt(channel, handle.v) };
       };
       const p1 = read(a);
       const p2 = read(b);
@@ -1652,14 +1660,14 @@ self.onmessage = (e) => {
           overlayCtx.moveTo(px, 0);
           overlayCtx.lineTo(px, overlayCanvas.height);
           overlayCtx.stroke();
-          const py = pair.kind === "xy" ? voltToPx(handle.v) : voltToPx(metrics[index === 0 ? "p1" : "p2"].displayV);
+          const py = pair.kind === "xy" ? voltToPx(signalToDisplayVolt(metrics.channel, handle.v)) : voltToPx(metrics[index === 0 ? "p1" : "p2"].displayV);
           drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
           drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`, color);
         });
       }
       if (pair.kind === "y" || pair.kind === "xy") {
         pair.handles.forEach((handle, index) => {
-          const py = voltToPx(handle.v);
+          const py = voltToPx(signalToDisplayVolt(metrics.channel, handle.v));
           overlayCtx.beginPath();
           overlayCtx.moveTo(0, py);
           overlayCtx.lineTo(overlayCanvas.width, py);
@@ -1672,7 +1680,7 @@ self.onmessage = (e) => {
       if (pair.handles[1]) {
         const deltaText = `ΔT ${fmt(metrics.dt, "s")}  ΔV ${fmt(metrics.dv, "V")}`;
         const midX = timeToPx((metrics.p1.t + metrics.p2.t) / 2);
-        const midY = pair.kind === "y" || pair.kind === "xy" ? voltToPx((pair.handles[0].v + pair.handles[1].v) / 2) : 40 * state.dpr;
+        const midY = pair.kind === "y" || pair.kind === "xy" ? voltToPx(signalToDisplayVolt(metrics.channel, (pair.handles[0].v + pair.handles[1].v) / 2)) : 40 * state.dpr;
         drawTag(midX + 12 * state.dpr, midY - 12 * state.dpr, deltaText, color);
       }
       overlayCtx.restore();
@@ -1748,13 +1756,13 @@ self.onmessage = (e) => {
           let hx = timeToPx(handle.t);
           let hy = 0;
           if (pair.kind === "x") hy = voltToPx(j === 0 ? metrics.p1.displayV : metrics.p2.displayV);
-          else if (pair.kind === "y") { hx = 16 * state.dpr + j * 28 * state.dpr; hy = voltToPx(handle.v); }
-          else if (pair.kind === "xy") { hx = timeToPx(handle.t); hy = voltToPx(handle.v); }
+          else if (pair.kind === "y") { hx = 16 * state.dpr + j * 28 * state.dpr; hy = voltToPx(signalToDisplayVolt(metrics.channel, handle.v)); }
+          else if (pair.kind === "xy") { hx = timeToPx(handle.t); hy = voltToPx(signalToDisplayVolt(metrics.channel, handle.v)); }
           else { hx = timeToPx(handle.t); hy = voltToPx(metrics.p1.displayV); }
           const dx = px - hx;
           const dy = py - hy;
-          if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j };
-          if (pair.kind === "y" && Math.abs(dy) <= lineRadius) return { pairId: pair.id, handleIndex: j };
+          if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j, hitArea: "handle" };
+          if (pair.kind === "y" && Math.abs(dy) <= lineRadius) return { pairId: pair.id, handleIndex: j, hitArea: "line" };
         }
       }
       return null;
@@ -1777,10 +1785,10 @@ self.onmessage = (e) => {
         handle.t = time;
         handle.v = sampleAtTime(channel, time, false);
       } else if (pair.kind === "y") {
-        handle.v = volt;
+        handle.v = displayToSignalVolt(channel, volt);
       } else if (pair.kind === "xy") {
         handle.t = time;
-        handle.v = volt;
+        handle.v = displayToSignalVolt(channel, volt);
       } else {
         handle.t = time;
         handle.v = sampleAtTime(channel, time, false);
@@ -2055,7 +2063,14 @@ self.onmessage = (e) => {
     overlayCanvas.addEventListener("mousedown", (e) => {
       if (!state.channels.length) return;
       const { x, y } = overlayPointFromMouseEvent(e);
+      const hitCursor = hitTestCursor(x, y);
       const hitTag = hitTestChannelTag(x, y);
+      if (hitCursor && (hitCursor.hitArea === "handle" || !hitTag)) {
+        state.dragging = { type: "cursor", pairId: hitCursor.pairId, handleIndex: hitCursor.handleIndex };
+        setSelectedCursor(hitCursor.pairId, hitCursor.handleIndex);
+        e.preventDefault();
+        return;
+      }
       if (hitTag) {
         const ch = getChannelById(hitTag.channelId);
         if (ch) {
@@ -2064,12 +2079,6 @@ self.onmessage = (e) => {
           e.preventDefault();
           return;
         }
-      }
-      const hit = hitTestCursor(x, y);
-      if (hit) {
-        state.dragging = { type: "cursor", pairId: hit.pairId, handleIndex: hit.handleIndex };
-        setSelectedCursor(hit.pairId, hit.handleIndex);
-        return;
       }
       state.dragging = { type: e.shiftKey ? "box" : "pan", startX: x, startY: y, view: { ...state.viewState } };
       if (state.dragging.type === "box") state.zoomBox = { x0: x, y0: y, x1: x, y1: y };
