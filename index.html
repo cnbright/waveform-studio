@@ -15,7 +15,7 @@
       --warn:#fbbf24;
       --shadow:0 18px 48px rgba(1,7,18,.42);
       --toolbar-cols:1.6fr 10px 1fr 10px 1fr;
-      --footer-cols:1.2fr 10px 1fr 10px 1.2fr;
+      --footer-cols:1fr 10px 2fr;
       --footer-height:24vh;
     }
     *{box-sizing:border-box}
@@ -76,7 +76,6 @@
     .sidebar::-webkit-scrollbar,
     .footerPanel::-webkit-scrollbar,
     .metricGrid::-webkit-scrollbar,
-    .cursorSummary::-webkit-scrollbar,
     .cursorTableWrap::-webkit-scrollbar{
       width:12px;
       height:12px;
@@ -85,7 +84,6 @@
     .sidebar::-webkit-scrollbar-track,
     .footerPanel::-webkit-scrollbar-track,
     .metricGrid::-webkit-scrollbar-track,
-    .cursorSummary::-webkit-scrollbar-track,
     .cursorTableWrap::-webkit-scrollbar-track{
       background:rgba(8,17,29,.9);
       border-radius:999px;
@@ -95,7 +93,6 @@
     .sidebar::-webkit-scrollbar-thumb,
     .footerPanel::-webkit-scrollbar-thumb,
     .metricGrid::-webkit-scrollbar-thumb,
-    .cursorSummary::-webkit-scrollbar-thumb,
     .cursorTableWrap::-webkit-scrollbar-thumb{
       background:linear-gradient(180deg, rgba(110,231,255,.58), rgba(56,189,248,.34));
       border-radius:999px;
@@ -106,7 +103,6 @@
     .sidebar::-webkit-scrollbar-thumb:hover,
     .footerPanel::-webkit-scrollbar-thumb:hover,
     .metricGrid::-webkit-scrollbar-thumb:hover,
-    .cursorSummary::-webkit-scrollbar-thumb:hover,
     .cursorTableWrap::-webkit-scrollbar-thumb:hover{
       background:linear-gradient(180deg, rgba(110,231,255,.72), rgba(56,189,248,.46));
     }
@@ -148,6 +144,31 @@
     .toolbarRow .grow{flex:1 1 180px}
     .toolbarRow .rangeField{display:grid;gap:6px;min-width:110px;flex:1 1 120px}
     .toolbarRow .rangeField label,.field label{font-size:11px;color:var(--muted)}
+    .measurementToolbar{display:grid;gap:6px;align-content:start}
+    .measurementToolbar .toolbarTitle{margin-bottom:0}
+    .measurementToolbar input[type="number"]{padding:7px 8px}
+    .measurementScopeRow{display:flex;gap:8px;align-items:end;min-width:0}
+    .measurementScopeRow button{white-space:nowrap}
+    .measurementScopeRow .exportField{
+      display:grid;
+      gap:6px;
+      min-width:96px;
+      flex:1 1 110px;
+    }
+    .measurementScopeRow .exportField label,
+    .rangeInputs .rangeField label{font-size:11px;color:var(--muted)}
+    .rangeInputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .rangeInputs .rangeField{display:grid;gap:6px;min-width:0}
+    .toolbarHudGrid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      width:100%;
+      margin-top:10px;
+    }
+    .toolbarHudGrid .hudCard{padding:5px 7px;gap:2px;border-radius:10px}
+    .toolbarHudGrid .hudCard .label{font-size:9px}
+    .toolbarHudGrid .hudCard .value{font-size:11px}
     .workspace{min-height:360px;display:grid;grid-template-columns:280px 1fr;gap:12px}
     .sidebar{padding:14px;overflow:auto}
     .sectionHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -175,13 +196,8 @@
     .legendDot{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:0 0 12px currentColor;margin-top:3px;flex:0 0 auto}
     .statusCard{margin-top:14px;border:1px dashed var(--line);border-radius:16px;padding:12px;background:rgba(7,14,24,.52)}
     .statusCard pre{margin:0;white-space:pre-wrap;color:#c5d3e6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5}
-    .stage{padding:10px;display:grid;grid-template-rows:auto minmax(320px,1fr);gap:10px;overflow:hidden}
-    .stageTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:2px 4px 0}
-    .heroTitle{display:grid;gap:5px}
-    .heroTitle h1{margin:0;font-size:20px;letter-spacing:.01em}
-    .heroTitle p{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
-    .hudGrid{display:grid;grid-template-columns:repeat(4, minmax(120px, 1fr));gap:8px;width:min(660px,100%)}
-    .hudCard,.metricCard,.summaryLine{
+    .stage{padding:10px;display:grid;grid-template-rows:minmax(320px,1fr);overflow:hidden}
+    .hudCard,.metricCard{
       border:1px solid rgba(153,196,255,.12);
       border-radius:14px;
       background:rgba(9,18,31,.68);
@@ -260,6 +276,15 @@
     .app.focus-workspace .pill{padding:4px 7px;font-size:10px}
     .app.focus-workspace .toolbarRow .rangeField{gap:2px;min-width:72px;flex:1 1 78px}
     .app.focus-workspace .toolbarRow .rangeField label{font-size:9px}
+    .app.focus-workspace .measurementToolbar{gap:4px}
+    .app.focus-workspace .measurementScopeRow,
+    .app.focus-workspace .rangeInputs,
+    .app.focus-workspace .toolbarHudGrid{gap:5px}
+    .app.focus-workspace .toolbarHudGrid{margin-top:4px}
+    .app.focus-workspace .measurementScopeRow .exportField,
+    .app.focus-workspace .rangeInputs .rangeField{gap:2px}
+    .app.focus-workspace .measurementScopeRow .exportField label,
+    .app.focus-workspace .rangeInputs .rangeField label{font-size:9px}
     .app.focus-workspace input[type="number"],
     .app.focus-workspace input[type="text"],
     .app.focus-workspace select{padding:5px 6px;border-radius:7px}
@@ -267,20 +292,14 @@
     .app.focus-workspace .toolbarSection:nth-child(3) .toolbarRow:last-child{align-items:end}
     .app.focus-workspace .toolbarResizer::before{top:6px;bottom:6px}
     .app.focus-workspace .workspace{grid-template-columns:220px 1fr;min-height:420px}
-    .app.focus-workspace .stage{padding:8px;grid-template-rows:auto minmax(420px,1fr);gap:8px}
-    .app.focus-workspace .stageTop{padding:0;gap:6px;align-items:center}
-    .app.focus-workspace .heroTitle{gap:2px}
-    .app.focus-workspace .heroTitle h1{font-size:14px}
-    .app.focus-workspace .heroTitle p{display:none}
-    .app.focus-workspace .hudGrid{grid-template-columns:repeat(4, minmax(98px, 1fr));gap:6px;width:min(500px,100%)}
+    .app.focus-workspace .stage{padding:8px;grid-template-rows:minmax(420px,1fr)}
     .app.focus-workspace .hudCard{padding:6px 8px;gap:2px}
     .app.focus-workspace .hudCard .label{font-size:10px}
     .app.focus-workspace .hudCard .value{font-size:12px}
     .app.focus-workspace .plotShell{min-height:420px}
     .app.focus-workspace .footerPanel{opacity:.88}
     .app.focus-workspace .footerBlock{padding:8px;gap:6px}
-    .app.focus-workspace .metricCard,
-    .app.focus-workspace .summaryLine{padding:8px 10px}
+    .app.focus-workspace .metricCard{padding:8px 10px}
     .footerResizer{
       position:relative;
       width:10px;
@@ -320,9 +339,6 @@
     .footerBlockHeader span{font-size:12px;color:var(--muted);white-space:nowrap}
     .metricGrid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;align-content:start;overflow:auto;min-height:0;padding-right:2px}
     .metricCard{padding:10px;display:grid;gap:4px;min-width:0}
-    .cursorSummary{display:grid;gap:8px;align-content:start;overflow:auto;min-height:0;padding-right:2px}
-    .summaryLine{padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-size:13px}
-    .summaryLine .key{color:var(--muted)}
     .cursorTableWrap{overflow:auto;min-height:0;border-radius:14px;border:1px solid rgba(153,196,255,.12);background:rgba(9,18,31,.62)}
     table{border-collapse:collapse;width:100%;min-width:560px}
     th,td{padding:10px;border-bottom:1px solid rgba(153,196,255,.08);text-align:left;font-size:12px;white-space:nowrap}
@@ -337,7 +353,6 @@
       .toolbarResizer{display:none}
       .footerPanel{grid-template-columns:1fr}
       .footerResizer{display:none}
-      .hudGrid{grid-template-columns:repeat(2, minmax(140px,1fr))}
     }
     @media (max-width: 1080px){
       .app{grid-template-rows:auto auto 10px auto}
@@ -349,8 +364,9 @@
     @media (max-width: 720px){
       body{overflow:auto}
       .app{height:auto;min-height:100%}
-      .hudGrid,.metricGrid,.channelFields{grid-template-columns:1fr}
-      .stageTop{padding:0}
+      .metricGrid,.channelFields{grid-template-columns:1fr}
+      .measurementScopeRow{flex-wrap:wrap}
+      .rangeInputs,.toolbarHudGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
   </style>
 </head>
@@ -370,6 +386,16 @@
           <div class="grow"></div>
           <div class="pill">支持 `.wfm` / `.h5` / `.osc`，可多文件叠加</div>
         </div>
+        <div class="toolbarHudGrid">
+          <div class="hudCard">
+            <div class="label">主测量通道</div>
+            <div id="hudActiveChannel" class="value">未选择</div>
+          </div>
+          <div class="hudCard">
+            <div class="label">测量范围</div>
+            <div id="hudScope" class="value">当前视图</div>
+          </div>
+        </div>
       </div>
       <div class="toolbarResizer" data-toolbar-split="0"></div>
       <div class="toolbarSection">
@@ -382,15 +408,30 @@
           <button id="btnDeleteCursor" class="warn">删除选中游标</button>
           <button id="btnClearCursors">清空全部游标</button>
         </div>
+        <div class="toolbarHudGrid">
+          <div class="hudCard">
+            <div class="label">游标状态</div>
+            <div id="hudCursor" class="value">无选中游标</div>
+          </div>
+          <div class="hudCard">
+            <div class="label">视图跨度</div>
+            <div id="hudSpan" class="value">-</div>
+          </div>
+        </div>
       </div>
       <div class="toolbarResizer" data-toolbar-split="1"></div>
-      <div class="toolbarSection">
+      <div class="toolbarSection measurementToolbar">
         <div class="toolbarTitle">量程与测量范围</div>
-        <div class="toolbarRow compact">
+        <div class="measurementScopeRow">
           <button id="btnScopeView" class="active">当前视图测量</button>
           <button id="btnScopeFull">全波形测量</button>
+          <button id="btnApplyRange" class="primary">应用范围</button>
+          <div class="exportField">
+            <label for="exportStep">全量导出抽点</label>
+            <input id="exportStep" type="number" min="1" step="1" value="10" />
+          </div>
         </div>
-        <div class="toolbarRow" style="margin-top:10px">
+        <div class="rangeInputs">
           <div class="rangeField">
             <label for="tMinInput">tMin (s)</label>
             <input id="tMinInput" type="number" step="0.000001" />
@@ -406,11 +447,6 @@
           <div class="rangeField">
             <label for="vMaxInput">vMax (V)</label>
             <input id="vMaxInput" type="number" step="0.001" />
-          </div>
-          <button id="btnApplyRange" class="primary">应用范围</button>
-          <div class="rangeField" style="max-width:130px">
-            <label for="exportStep">全量导出抽点</label>
-            <input id="exportStep" type="number" min="1" step="1" value="10" />
           </div>
         </div>
       </div>
@@ -436,31 +472,6 @@
       </aside>
 
       <section class="stage">
-        <div class="stageTop">
-          <div class="heroTitle">
-            <h1>Waveform Studio</h1>
-            <p>滚轮缩放，拖拽平移，按住 Shift 可框选放大。游标直接拖动，自动测量始终围绕当前主测量通道更新。</p>
-          </div>
-          <div class="hudGrid">
-            <div class="hudCard">
-              <div class="label">主测量通道</div>
-              <div id="hudActiveChannel" class="value">未选择</div>
-            </div>
-            <div class="hudCard">
-              <div class="label">测量范围</div>
-              <div id="hudScope" class="value">当前视图</div>
-            </div>
-            <div class="hudCard">
-              <div class="label">游标状态</div>
-              <div id="hudCursor" class="value">无选中游标</div>
-            </div>
-            <div class="hudCard">
-              <div class="label">视图跨度</div>
-              <div id="hudSpan" class="value">-</div>
-            </div>
-          </div>
-        </div>
-
         <div class="plotShell" id="plotShell">
           <canvas id="plotCanvas"></canvas>
           <canvas id="overlayCanvas"></canvas>
@@ -489,21 +500,12 @@
         </div>
         <div id="measurementCards" class="metricGrid"></div>
       </div>
-      <div class="footerResizer" data-footer-split="0"></div>
-
-      <div class="footerBlock">
-        <div class="footerBlockHeader">
-          <h3>游标实时读数</h3>
-          <span id="cursorContext">选中游标后在波形区直接拖动</span>
-        </div>
-        <div id="cursorSummary" class="cursorSummary"></div>
-      </div>
-      <div class="footerResizer" data-footer-split="1"></div>
+      <div class="footerResizer"></div>
 
       <div class="footerBlock">
         <div class="footerBlockHeader">
           <h3>游标列表</h3>
-          <span id="cursorTableHint">颜色、差值、删除</span>
+          <span id="cursorTableHint">颜色、差值、频率、删除</span>
         </div>
         <div class="cursorTableWrap">
           <table>
@@ -516,6 +518,7 @@
                 <th>T1</th>
                 <th>T2</th>
                 <th>ΔT</th>
+                <th>1/ΔT</th>
                 <th>V1</th>
                 <th>V2</th>
                 <th>ΔV</th>
@@ -540,7 +543,7 @@
       measurementScope: "view",
       focusWorkspace: false,
       toolbarWidths: [1.6, 1, 1],
-      footerWidths: [1.2, 1, 1.2],
+      footerWidths: [1, 2],
       footerHeight: null,
       channelTagRects: [],
       importSession: { active: false, pendingFiles: 0, loadedChannels: 0, failedFiles: 0, startedAt: 0 },
@@ -756,7 +759,7 @@ self.onmessage = (e) => {
     function syncHud() {
       $("appRoot").classList.toggle("focus-workspace", state.focusWorkspace);
       $("toolbar").style.setProperty("--toolbar-cols", `${state.toolbarWidths[0]}fr 10px ${state.toolbarWidths[1]}fr 10px ${state.toolbarWidths[2]}fr`);
-      $("footerPanel").style.setProperty("--footer-cols", `${state.footerWidths[0]}fr 10px ${state.footerWidths[1]}fr 10px ${state.footerWidths[2]}fr`);
+      $("footerPanel").style.setProperty("--footer-cols", `${state.footerWidths[0]}fr 10px ${state.footerWidths[1]}fr`);
       if (state.footerHeight) $("appRoot").style.setProperty("--footer-height", `${state.footerHeight}px`);
       const activeChannel = getActiveChannel(false);
       $("hudActiveChannel").textContent = activeChannel ? activeChannel.name : "未选择";
@@ -1195,14 +1198,16 @@ self.onmessage = (e) => {
           { name: "B", t: tCenter + tSpan * 0.1, v: sampleAtTime(channel, tCenter + tSpan * 0.1, false) }
         ];
       } else {
-        handles = [{ name: "A", t: tCenter, v: sampleAtTime(channel, tCenter, false) }];
+        handles = [
+          { name: "A", t: tCenter - tSpan * 0.1, v: sampleAtTime(channel, tCenter - tSpan * 0.1, false) },
+          { name: "B", t: tCenter + tSpan * 0.1, v: sampleAtTime(channel, tCenter + tSpan * 0.1, false) }
+        ];
       }
       const cursor = { ...base, handles };
       state.cursorPairs.push(cursor);
       state.selectedCursor = { id: cursor.id, handleIndex: 0 };
       syncHud();
       rebuildCursorTable();
-      updateCursorSummary();
       renderAll();
     }
 
@@ -1246,33 +1251,10 @@ self.onmessage = (e) => {
       return `<select class="cursorChannelSelect" data-cursor-action="channel" data-id="${pair.id}" title="选择此游标作用的通道">${options}</select>`;
     }
 
-    function updateCursorSummary() {
-      const box = $("cursorSummary");
-      const pair = getSelectedCursorPair();
-      if (!pair) {
-        box.innerHTML = '<div class="emptyState">点击顶部工具条添加游标，或直接拖动已存在游标。这里会展示选中游标的实时读数。</div>';
-        return;
-      }
-      const metrics = getCursorMetrics(pair);
-      const lines = [];
-      lines.push(`<div class="summaryLine"><span class="key">游标</span><span>${pair.id} · ${pair.kindLabel}</span></div>`);
-      lines.push(`<div class="summaryLine"><span class="key">通道</span><span>${metrics.channel ? escapeHtml(metrics.channel.name) : "未绑定"}</span></div>`);
-      lines.push(`<div class="summaryLine"><span class="key">T1 / V1</span><span>${fmt(metrics.p1.t, "s")} / ${fmt(metrics.p1.v, "V")}</span></div>`);
-      if (pair.handles[1]) {
-        lines.push(`<div class="summaryLine"><span class="key">T2 / V2</span><span>${fmt(metrics.p2.t, "s")} / ${fmt(metrics.p2.v, "V")}</span></div>`);
-        lines.push(`<div class="summaryLine"><span class="key">ΔT / 1/ΔT</span><span>${fmt(metrics.dt, "s")} / ${fmt(metrics.invDt, "Hz")}</span></div>`);
-        lines.push(`<div class="summaryLine"><span class="key">ΔV</span><span>${fmt(metrics.dv, "V")}</span></div>`);
-      } else {
-        lines.push(`<div class="summaryLine"><span class="key">跟随读数</span><span>${fmt(metrics.p1.t, "s")} / ${fmt(metrics.p1.v, "V")}</span></div>`);
-      }
-      box.innerHTML = lines.join("");
-      $("cursorContext").textContent = `${pair.id} 已选中，可在波形区直接拖动`;
-    }
-
     function rebuildCursorTable() {
       const body = $("cursorTableBody");
       if (!state.cursorPairs.length) {
-        body.innerHTML = '<tr><td colspan="11" class="tiny">暂无游标。使用顶部工具条创建 X / Y / XY / 跟随游标。</td></tr>';
+        body.innerHTML = '<tr><td colspan="12" class="tiny">暂无游标。使用顶部工具条创建 X / Y / XY / 跟随游标。</td></tr>';
         return;
       }
       body.innerHTML = state.cursorPairs.map((pair) => {
@@ -1289,13 +1271,13 @@ self.onmessage = (e) => {
             <td>${fmt(h0.t, "s")}</td>
             <td>${h1 ? fmt(h1.t, "s") : "-"}</td>
             <td>${h1 ? fmt(metrics.dt, "s") : "-"}</td>
+            <td>${h1 ? fmt(metrics.invDt, "Hz") : "-"}</td>
             <td>${fmt(h0.v, "V")}</td>
             <td>${h1 ? fmt(h1.v, "V") : "-"}</td>
             <td>${h1 ? fmt(metrics.dv, "V") : "-"}</td>
             <td><button class="miniButton" data-cursor-action="delete" data-id="${pair.id}">删除</button></td>
           </tr>`;
       }).join("");
-      bindCursorColorInputs();
     }
 
     function bindChannelColorInputs() {
@@ -1306,20 +1288,6 @@ self.onmessage = (e) => {
           ch.color = input.value;
           renderAll();
           setStatus(`已更新通道颜色: ${ch.displayLabel || ch.name}\n当前颜色: ${input.value}`, "颜色已应用");
-        };
-        input.oninput = apply;
-        input.onchange = apply;
-      });
-    }
-
-    function bindCursorColorInputs() {
-      $("cursorTableBody").querySelectorAll('input[type="color"][data-cursor-action="color"]').forEach((input) => {
-        const apply = () => {
-          const pair = state.cursorPairs.find((item) => item.id === input.getAttribute("data-id"));
-          if (!pair) return;
-          pair.color = input.value;
-          renderAll();
-          setStatus(`已更新游标颜色: ${pair.id}\n当前颜色: ${input.value}`, "颜色已应用");
         };
         input.oninput = apply;
         input.onchange = apply;
@@ -1656,13 +1624,23 @@ self.onmessage = (e) => {
       if (pair.kind === "x" || pair.kind === "xy" || pair.kind === "follow") {
         pair.handles.forEach((handle, index) => {
           const px = timeToPx(handle.t);
+          const metricPoint = metrics[index === 0 ? "p1" : "p2"];
+          const py = pair.kind === "xy" ? voltToPx(signalToDisplayVolt(metrics.channel, handle.v)) : voltToPx(metricPoint.displayV);
           overlayCtx.beginPath();
           overlayCtx.moveTo(px, 0);
           overlayCtx.lineTo(px, overlayCanvas.height);
           overlayCtx.stroke();
-          const py = pair.kind === "xy" ? voltToPx(signalToDisplayVolt(metrics.channel, handle.v)) : voltToPx(metrics[index === 0 ? "p1" : "p2"].displayV);
+          if (pair.kind === "follow") {
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(0, py);
+            overlayCtx.lineTo(overlayCanvas.width, py);
+            overlayCtx.stroke();
+          }
           drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
-          drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`, color);
+          const tagText = pair.kind === "follow"
+            ? `${pair.id}-${handle.name} ${fmt(handle.t, "s")} / ${fmt(metricPoint.v, "V")}`
+            : `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`;
+          drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, tagText, color);
         });
       }
       if (pair.kind === "y" || pair.kind === "xy") {
@@ -1722,7 +1700,6 @@ self.onmessage = (e) => {
 
     function renderPanels() {
       updateMeasurementPanelAsync();
-      updateCursorSummary();
       rebuildCursorTable();
     }
 
@@ -1755,14 +1732,14 @@ self.onmessage = (e) => {
           const handle = pair.handles[j];
           let hx = timeToPx(handle.t);
           let hy = 0;
-          if (pair.kind === "x") hy = voltToPx(j === 0 ? metrics.p1.displayV : metrics.p2.displayV);
+          if (pair.kind === "x" || pair.kind === "follow") hy = voltToPx(j === 0 ? metrics.p1.displayV : metrics.p2.displayV);
           else if (pair.kind === "y") { hx = 16 * state.dpr + j * 28 * state.dpr; hy = voltToPx(signalToDisplayVolt(metrics.channel, handle.v)); }
           else if (pair.kind === "xy") { hx = timeToPx(handle.t); hy = voltToPx(signalToDisplayVolt(metrics.channel, handle.v)); }
-          else { hx = timeToPx(handle.t); hy = voltToPx(metrics.p1.displayV); }
           const dx = px - hx;
           const dy = py - hy;
           if (Math.sqrt(dx * dx + dy * dy) <= radius) return { pairId: pair.id, handleIndex: j, hitArea: "handle" };
           if (pair.kind === "y" && Math.abs(dy) <= lineRadius) return { pairId: pair.id, handleIndex: j, hitArea: "line" };
+          if ((pair.kind === "x" || pair.kind === "follow") && Math.abs(dx) <= lineRadius) return { pairId: pair.id, handleIndex: j, hitArea: "line" };
         }
       }
       return null;
@@ -1771,7 +1748,6 @@ self.onmessage = (e) => {
     function setSelectedCursor(pairId, handleIndex = 0) {
       state.selectedCursor = pairId ? { id: pairId, handleIndex } : null;
       syncHud();
-      updateCursorSummary();
       rebuildCursorTable();
       renderAll();
     }
@@ -1846,7 +1822,6 @@ self.onmessage = (e) => {
       state.cursorPairs = state.cursorPairs.filter((pair) => pair.id !== id);
       if (state.selectedCursor && state.selectedCursor.id === id) state.selectedCursor = null;
       rebuildCursorTable();
-      updateCursorSummary();
       syncHud();
       renderAll();
     }
@@ -1862,13 +1837,13 @@ self.onmessage = (e) => {
       syncHud();
     }
 
-    function setFooterWidths(left, middle, right) {
+    function setFooterWidths(left, right) {
       const min = 0.75;
-      const total = Math.max(left + middle + right, 0.001);
-      let next = [left, middle, right].map((v) => v / total * 3.4);
+      const total = Math.max(left + right, 0.001);
+      let next = [left, right].map((v) => v / total * 3);
       next = next.map((v) => Math.max(min, v));
-      const fixedTotal = next[0] + next[1] + next[2];
-      next = next.map((v) => v / fixedTotal * 3.4);
+      const fixedTotal = next[0] + next[1];
+      next = next.map((v) => v / fixedTotal * 3);
       state.footerWidths = next;
       syncHud();
     }
@@ -1920,6 +1895,9 @@ self.onmessage = (e) => {
       if (!pair) return;
       if (action === "color") {
         pair.color = target.value;
+        drawOverlay();
+        setStatus(`已更新游标颜色: ${pair.id}\n当前颜色: ${target.value}`, "颜色已应用");
+        return;
       } else if (action === "channel") {
         const channel = getChannelById(target.value);
         if (!channel) return;
@@ -1932,7 +1910,6 @@ self.onmessage = (e) => {
       } else {
         return;
       }
-      updateCursorSummary();
       rebuildCursorTable();
       syncHud();
       renderAll();
@@ -1995,15 +1972,13 @@ self.onmessage = (e) => {
     $("footerPanel").querySelectorAll(".footerResizer").forEach((handle) => {
       handle.addEventListener("mousedown", (e) => {
         if (window.innerWidth <= 1500) return;
-        const split = parseInt(handle.getAttribute("data-footer-split"), 10);
         const panelRect = $("footerPanel").getBoundingClientRect();
-        const totalWidth = panelRect.width - 20;
+        const totalWidth = panelRect.width - 10;
         const startX = e.clientX;
-        const startWidthsPx = state.footerWidths.map((fr) => fr / 3.4 * totalWidth);
+        const startWidthsPx = state.footerWidths.map((fr) => fr / 3 * totalWidth);
         handle.classList.add("active");
         state.dragging = {
           type: "footer-resize",
-          split,
           startX,
           startWidthsPx
         };
@@ -2089,7 +2064,12 @@ self.onmessage = (e) => {
       state.hoverInfo = { x, y };
       const hitTag = hitTestChannelTag(x, y);
       const hitCursor = hitTestCursor(x, y);
-      overlayCanvas.style.cursor = hitTag || hitCursor ? "ns-resize" : "";
+      const hitPair = hitCursor ? state.cursorPairs.find((pair) => pair.id === hitCursor.pairId) : null;
+      overlayCanvas.style.cursor = hitTag
+        ? "ns-resize"
+        : hitPair
+          ? (hitPair.kind === "y" ? "ns-resize" : hitPair.kind === "xy" ? "move" : "ew-resize")
+          : "";
       if (updateCanvasDrag(x, y)) {
         e.preventDefault();
         return;
@@ -2113,14 +2093,9 @@ self.onmessage = (e) => {
       } else if (state.dragging.type === "footer-resize") {
         const delta = e.clientX - state.dragging.startX;
         const widths = [...state.dragging.startWidthsPx];
-        if (state.dragging.split === 0) {
-          widths[0] += delta;
-          widths[1] -= delta;
-        } else {
-          widths[1] += delta;
-          widths[2] -= delta;
-        }
-        setFooterWidths(widths[0], widths[1], widths[2]);
+        widths[0] += delta;
+        widths[1] -= delta;
+        setFooterWidths(widths[0], widths[1]);
       } else if (state.dragging.type === "footer-height-resize") {
         const delta = e.clientY - state.dragging.startY;
         setFooterHeight(state.dragging.startHeight - delta);
@@ -2203,7 +2178,6 @@ self.onmessage = (e) => {
     syncRangeInputs();
     rebuildChannelList();
     rebuildCursorTable();
-    updateCursorSummary();
     syncHud();
     setStatus("等待导入波形文件。\n支持 Tektronix WFM#003、Keysight H5 与 OSC。", "待机");
   </script>
