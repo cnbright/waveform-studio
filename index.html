@@ -668,6 +668,31 @@ self.onmessage = (e) => {
       return `${out} ${unit}`;
     }
 
+    function fmtMarkerTime(value) {
+      if (!isFinite(value)) return "不可用";
+      const abs = Math.abs(value);
+      let scale;
+      let unit;
+      if (abs >= 1) {
+        scale = 1;
+        unit = "s";
+      } else if (abs >= 1e-3) {
+        scale = 1e3;
+        unit = "ms";
+      } else if (abs >= 1e-6) {
+        scale = 1e6;
+        unit = "us";
+      } else {
+        scale = 1e12;
+        unit = "ps";
+      }
+      const scaled = value * scale;
+      const scaledAbs = Math.abs(scaled);
+      const decimals = scaledAbs >= 100 ? 3 : scaledAbs >= 10 ? 4 : 6;
+      const out = scaled.toFixed(decimals).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1");
+      return `${out} ${unit}`;
+    }
+
     function pickColor(index) {
       return palette[index % palette.length];
     }
@@ -1268,9 +1293,9 @@ self.onmessage = (e) => {
             <td>${pair.kindLabel}</td>
             <td>${buildCursorChannelSelect(pair, metrics.channel)}</td>
             <td><input type="color" value="${pair.color}" data-cursor-action="color" data-id="${pair.id}" /></td>
-            <td>${fmt(h0.t, "s")}</td>
-            <td>${h1 ? fmt(h1.t, "s") : "-"}</td>
-            <td>${h1 ? fmt(metrics.dt, "s") : "-"}</td>
+            <td>${fmtMarkerTime(h0.t)}</td>
+            <td>${h1 ? fmtMarkerTime(h1.t) : "-"}</td>
+            <td>${h1 ? fmtMarkerTime(metrics.dt) : "-"}</td>
             <td>${h1 ? fmt(metrics.invDt, "Hz") : "-"}</td>
             <td>${fmt(h0.v, "V")}</td>
             <td>${h1 ? fmt(h1.v, "V") : "-"}</td>
@@ -1638,8 +1663,8 @@ self.onmessage = (e) => {
           }
           drawHandle(px, py, color, selected && state.selectedCursor.handleIndex === index);
           const tagText = pair.kind === "follow"
-            ? `${pair.id}-${handle.name} ${fmt(handle.t, "s")} / ${fmt(metricPoint.v, "V")}`
-            : `${pair.id}-${handle.name} ${fmt(handle.t, "s")}`;
+            ? `${pair.id}-${handle.name} ${fmtMarkerTime(handle.t)} / ${fmt(metricPoint.v, "V")}`
+            : `${pair.id}-${handle.name} ${fmtMarkerTime(handle.t)}`;
           drawTag(px + 10 * state.dpr, 18 * state.dpr + index * 20 * state.dpr, tagText, color);
         });
       }
@@ -1656,7 +1681,7 @@ self.onmessage = (e) => {
         });
       }
       if (pair.handles[1]) {
-        const deltaText = `ΔT ${fmt(metrics.dt, "s")}  ΔV ${fmt(metrics.dv, "V")}`;
+        const deltaText = `ΔT ${fmtMarkerTime(metrics.dt)}  ΔV ${fmt(metrics.dv, "V")}`;
         const midX = timeToPx((metrics.p1.t + metrics.p2.t) / 2);
         const midY = pair.kind === "y" || pair.kind === "xy" ? voltToPx(signalToDisplayVolt(metrics.channel, (pair.handles[0].v + pair.handles[1].v) / 2)) : 40 * state.dpr;
         drawTag(midX + 12 * state.dpr, midY - 12 * state.dpr, deltaText, color);
