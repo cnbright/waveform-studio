@@ -4,7 +4,7 @@
 
 ## 中文说明
 
-Waveform Studio 是一个单文件离线示波器波形工作台，用于查看和测量 Tektronix `WFM#003`、Keysight `H5` 与 Keysight `OSC` 存储波形文件。
+Waveform Studio 是一个单文件离线示波器波形工作台，用于查看和测量 Tektronix `WFM#003`、Keysight/Agilent `H5` 与 Keysight `OSC` 存储波形文件。
 
 ### 界面示例
 
@@ -12,7 +12,7 @@ Waveform Studio 是一个单文件离线示波器波形工作台，用于查看�
 
 ### 功能特性
 
-- 支持同时导入多个 `.wfm`、`.h5` 与 `.osc` 文件
+- 支持同时导入多个 `.wfm`、`.h5` 与 `.osc` 文件，包括整型 ADC 数据和已换算为伏特的浮点 H5 波形
 - 支持多通道叠加显示，并可分别设置颜色、左侧标签、`Y Scale`、`Y Offset`
 - 支持示波器常见交互：滚轮缩放、拖拽平移、框选放大、双击全局自适应
 - 支持 `X`、`Y`、`XY`、跟随四类游标
@@ -51,7 +51,7 @@ MIT
 
 ## English
 
-Waveform Studio is a single-file offline oscilloscope waveform workbench for viewing and measuring Tektronix `WFM#003`, Keysight `H5`, and Keysight `OSC` waveform files.
+Waveform Studio is a single-file offline oscilloscope waveform workbench for viewing and measuring Tektronix `WFM#003`, Keysight/Agilent `H5`, and Keysight `OSC` waveform files.
 
 ### Screenshot
 
@@ -59,7 +59,7 @@ Waveform Studio is a single-file offline oscilloscope waveform workbench for vie
 
 ### Features
 
-- Import multiple `.wfm`, `.h5`, and `.osc` files
+- Import multiple `.wfm`, `.h5`, and `.osc` files, including integer ADC data and H5 waveforms stored as scaled floating-point volts
 - Overlay channels with per-channel color, left-side label, `Y Scale`, and `Y Offset`
 - Oscilloscope-style navigation with wheel zoom, drag pan, box zoom, and double-click autoscale
 - Cursor tools for `X`, `Y`, `XY`, and follow mode

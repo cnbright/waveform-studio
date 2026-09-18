@@ -715,15 +715,18 @@ self.onmessage = (e) => {
       const maxs = [raw];
       let curMin = raw;
       let curMax = raw;
+      const ArrayType = raw instanceof Float64Array ? Float64Array
+        : raw instanceof Float32Array ? Float32Array
+        : Int16Array;
       while (true) {
         const m = Math.ceil(curMin.length / factor);
-        const mn = new Int16Array(m);
-        const mx = new Int16Array(m);
+        const mn = new ArrayType(m);
+        const mx = new ArrayType(m);
         for (let j = 0; j < m; j++) {
           const start = j * factor;
           const end = Math.min((j + 1) * factor, curMin.length);
-          let vmin = 32767;
-          let vmax = -32768;
+          let vmin = Infinity;
+          let vmax = -Infinity;
           for (let k = start; k < end; k++) {
             const a = curMin[k];
             const b = curMax[k];
@@ -943,7 +946,13 @@ self.onmessage = (e) => {
         setStatus(`开始解析 ${format}: ${file.name}\n发现 ${channelNames.length} 个候选通道`, `${format} 解析中`);
         for (const channelName of channelNames) {
           const groupPath = `Waveforms/${channelName}`;
-          const dataPath = `${groupPath}/${channelName}Data`;
+          const group = opened.get(groupPath);
+          const datasetNames = group.keys();
+          const preferredNames = [`${channelName}Data`, `${channelName} Data`];
+          const datasetName = preferredNames.find((name) => datasetNames.includes(name))
+            || datasetNames.find((name) => /data$/i.test(name));
+          if (!datasetName) continue;
+          const dataPath = `${groupPath}/${datasetName}`;
           let dataset;
           try {
             dataset = opened.get(dataPath);
@@ -952,8 +961,11 @@ self.onmessage = (e) => {
           }
           const rawSource = dataset.value;
           if (!rawSource || !rawSource.length) continue;
-          const raw = rawSource instanceof Int16Array ? new Int16Array(rawSource) : Int16Array.from(rawSource);
-          const group = opened.get(groupPath);
+          const samplesAreVolts = rawSource instanceof Float32Array || rawSource instanceof Float64Array;
+          const raw = rawSource instanceof Float64Array ? new Float64Array(rawSource)
+            : rawSource instanceof Float32Array ? new Float32Array(rawSource)
+            : rawSource instanceof Int16Array ? new Int16Array(rawSource)
+            : Float64Array.from(rawSource, Number);
           const attrs = group.attrs || {};
           const numAttr = (key, fallback = 0) => {
             const value = attrs[key] && attrs[key].value;
@@ -967,8 +979,10 @@ self.onmessage = (e) => {
           const y_org = numAttr("YOrg", 0);
           const y_inc = numAttr("YInc", 1);
           const y_ref = numAttr("YReference", 0);
-          const y_mult = y_inc;
-          const y_zero = y_org - y_ref * y_inc;
+          // Some Agilent H5 variants store already-scaled float samples, while
+          // newer Keysight files store integer ADC codes plus Y calibration.
+          const y_mult = samplesAreVolts ? 1 : y_inc;
+          const y_zero = samplesAreVolts ? 0 : y_org - y_ref * y_inc;
           const pyramid = buildPyramidFromRaw(raw, 8);
           addChannel({
             id: `ch${state.nextChannelId++}`,
@@ -995,7 +1009,7 @@ self.onmessage = (e) => {
         try { if (opened) opened.close(); } catch (err) {}
         try { FS.unlink(filePath); } catch (err) {}
       }
-      if (!loaded) throw new Error(`${format} 中未找到可解析通道（期望 /Waveforms/Channel N/Channel NData）。`);
+      if (!loaded) throw new Error(`${format} 中未找到可解析通道（期望 /Waveforms 下存在以 Data 结尾的数据集）。`);
       finishImportFile(true, `${format} 导入完成: ${file.name}\n新增通道: ${loaded}`);
     }
 
@@ -1518,8 +1532,8 @@ self.onmessage = (e) => {
             binT += binDt;
           }
           if (bin >= a1) break;
-          let localMin = 32767;
-          let localMax = -32768;
+          let localMin = Infinity;
+          let localMax = -Infinity;
           let b = bin;
           let bt = binT;
           while (bt < tt1 && b < a1) {
