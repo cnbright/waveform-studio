@@ -368,6 +368,27 @@
       .measurementScopeRow{flex-wrap:wrap}
       .rangeInputs,.toolbarHudGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
+    #btnExpandToolbar{display:none}
+    .toolbarFoldRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+    .toolbarFoldRow button{padding:4px 10px;font-size:12px}
+    .app.toolbar-collapsed .toolbarTitle,
+    .app.toolbar-collapsed .toolbarRow,
+    .app.toolbar-collapsed .toolbarFoldRow,
+    .app.toolbar-collapsed .measurementScopeRow{display:none}
+    .app.toolbar-collapsed .toolbarSection{padding:6px 8px;border-radius:12px;display:flex;align-items:center}
+    .app.toolbar-collapsed .toolbarHudGrid{margin-top:0;gap:6px;align-items:center}
+    .app.toolbar-collapsed .fileHud{grid-template-columns:auto minmax(0,1fr) auto}
+    .app.toolbar-collapsed #btnExpandToolbar{display:block;padding:6px 8px;font-size:12px;white-space:nowrap}
+    .app.toolbar-collapsed .hudCard{padding:4px 6px}
+    .app.toolbar-collapsed .rangeInputs{width:100%;gap:6px}
+    .app.toolbar-collapsed .rangeInputs .rangeField{gap:2px}
+    .app.toolbar-collapsed .rangeInputs input{padding:4px 6px;font-size:12px}
+    .app.toolbar-collapsed .toolbar{grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr) 10px minmax(0,1.2fr)}
+    .app.toolbar-collapsed .toolbarResizer{display:block;cursor:default}
+    @media(max-width:900px){
+      .app.toolbar-collapsed .toolbar{grid-template-columns:1fr;gap:4px}
+      .app.toolbar-collapsed .toolbarResizer{display:none}
+    }
   </style>
 </head>
 <body>
@@ -384,9 +405,13 @@
           <button id="btnExportVisible">导出当前视图 CSV</button>
           <button id="btnExportFull">导出全量抽点 CSV</button>
           <div class="grow"></div>
+        </div>
+        <div class="toolbarFoldRow">
+          <button id="btnCollapseToolbar" aria-expanded="true" aria-controls="toolbar">⌃ 收起</button>
           <div class="pill">支持 `.wfm` / `.h5` / `.osc`，可多文件叠加</div>
         </div>
-        <div class="toolbarHudGrid">
+        <div class="toolbarHudGrid fileHud">
+          <button id="btnExpandToolbar" aria-expanded="false" aria-controls="toolbar">⌄ 展开</button>
           <div class="hudCard">
             <div class="label">主测量通道</div>
             <div id="hudActiveChannel" class="value">未选择</div>
@@ -542,6 +567,7 @@
       cursorPairs: [],
       measurementScope: "view",
       focusWorkspace: false,
+      toolbarCollapsed: false,
       toolbarWidths: [1.6, 1, 1],
       footerWidths: [1, 2],
       footerHeight: null,
@@ -670,6 +696,7 @@ self.onmessage = (e) => {
 
     function fmtMarkerTime(value) {
       if (!isFinite(value)) return "不可用";
+      if (value === 0) return "0 s";
       const abs = Math.abs(value);
       let scale;
       let unit;
@@ -682,6 +709,9 @@ self.onmessage = (e) => {
       } else if (abs >= 1e-6) {
         scale = 1e6;
         unit = "us";
+      } else if (abs >= 1e-9) {
+        scale = 1e9;
+        unit = "ns";
       } else {
         scale = 1e12;
         unit = "ps";
@@ -785,6 +815,7 @@ self.onmessage = (e) => {
     }
 
     function syncHud() {
+      $("appRoot").classList.toggle("toolbar-collapsed", state.toolbarCollapsed);
       $("appRoot").classList.toggle("focus-workspace", state.focusWorkspace);
       $("toolbar").style.setProperty("--toolbar-cols", `${state.toolbarWidths[0]}fr 10px ${state.toolbarWidths[1]}fr 10px ${state.toolbarWidths[2]}fr`);
       $("footerPanel").style.setProperty("--footer-cols", `${state.footerWidths[0]}fr 10px ${state.footerWidths[1]}fr`);
@@ -800,7 +831,7 @@ self.onmessage = (e) => {
       $("hudCursor").textContent = cursor ? `${cursor.id} · ${cursor.kindLabel}` : "无选中游标";
       $("measurementContext").textContent = activeChannel ? `基于 ${activeChannel.name} · ${state.measurementScope === "view" ? "当前视图" : "全波形"}` : "基于当前主测量通道";
       $("dataBadge").textContent = state.channels.length ? `${state.channels.filter((ch) => ch.enabled).length}/${state.channels.length} 通道显示中` : "暂无数据";
-      $("xAxisText").textContent = `Time  ${fmt(state.viewState.tMin, "s")} ~ ${fmt(state.viewState.tMax, "s")}`;
+      $("xAxisText").textContent = `Time  ${fmtMarkerTime(state.viewState.tMin)} ~ ${fmtMarkerTime(state.viewState.tMax)}`;
       $("yAxisText").textContent = `Volt  ${fmt(state.viewState.vMin, "V")} ~ ${fmt(state.viewState.vMax, "V")}`;
       $("btnScopeView").classList.toggle("active", state.measurementScope === "view");
       $("btnScopeFull").classList.toggle("active", state.measurementScope === "full");
@@ -1507,6 +1538,45 @@ self.onmessage = (e) => {
       for (const channel of state.channels) {
         if (!channel.enabled) continue;
         const { x_zero, x_incr, npts } = channel.meta;
+        if (!npts || x_incr <= 0 || tMax < x_zero || tMin > x_zero + (npts - 1) * x_incr) continue;
+        const pixelsPerSample = x_incr * w / (tMax - tMin);
+        if (pixelsPerSample >= 0.5) {
+          // Include both neighbors outside the view so a zoom between samples
+          // still shows the connecting segment. The canvas clips at its edges.
+          const first = clamp(Math.floor((tMin - x_zero) / x_incr), 0, npts - 1);
+          const last = clamp(Math.ceil((tMax - x_zero) / x_incr), 0, npts - 1);
+          plotCtx.save();
+          plotCtx.strokeStyle = channel.color;
+          plotCtx.fillStyle = channel.color;
+          plotCtx.lineWidth = Math.max(1, state.dpr);
+          plotCtx.lineJoin = "round";
+          plotCtx.globalAlpha = 0.94;
+          plotCtx.beginPath();
+          let connected = false;
+          for (let i = first; i <= last; i++) {
+            const x = timeToPx(x_zero + i * x_incr);
+            const y = voltToPx(convertRawToDisplayVolt(channel, channel.raw[i]));
+            if (!Number.isFinite(y)) { connected = false; continue; }
+            if (connected) plotCtx.lineTo(x, y);
+            else plotCtx.moveTo(x, y);
+            connected = true;
+          }
+          plotCtx.stroke();
+          if (pixelsPerSample >= 8 * state.dpr || npts === 1) {
+            plotCtx.beginPath();
+            for (let i = first; i <= last; i++) {
+              const x = timeToPx(x_zero + i * x_incr);
+              const y = voltToPx(convertRawToDisplayVolt(channel, channel.raw[i]));
+              if (!Number.isFinite(y) || x < 0 || x > w) continue;
+              const radius = 1.5 * state.dpr;
+              plotCtx.moveTo(x + radius, y);
+              plotCtx.arc(x, y, radius, 0, Math.PI * 2);
+            }
+            plotCtx.fill();
+          }
+          plotCtx.restore();
+          continue;
+        }
         let i0 = Math.floor((tMin - x_zero) / x_incr);
         let i1 = Math.ceil((tMax - x_zero) / x_incr);
         i0 = clamp(i0, 0, npts - 1);
@@ -1548,7 +1618,8 @@ self.onmessage = (e) => {
           const x = px + 0.5;
           plotCtx.beginPath();
           plotCtx.moveTo(x, y1);
-          plotCtx.lineTo(x, y2);
+          // A constant bin must remain visible instead of a zero-length stroke.
+          plotCtx.lineTo(x, y2 === y1 ? y2 + 1 : y2);
           plotCtx.stroke();
         }
         plotCtx.restore();
@@ -1956,6 +2027,20 @@ self.onmessage = (e) => {
 
     $("btnOpen").addEventListener("click", () => $("fileInput").click());
     $("fileInput").addEventListener("change", (e) => handleFiles([...e.target.files]));
+    function setToolbarCollapsed(collapsed) {
+      state.toolbarCollapsed = collapsed;
+      syncHud();
+      if (state.footerHeight) setFooterHeight(state.footerHeight);
+      else resizeCanvas();
+      $(collapsed ? "btnExpandToolbar" : "btnCollapseToolbar").focus();
+    }
+    $("btnCollapseToolbar").addEventListener("click", () => setToolbarCollapsed(true));
+    $("btnExpandToolbar").addEventListener("click", () => setToolbarCollapsed(false));
+    $("toolbar").querySelectorAll(".rangeInputs input").forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") $("btnApplyRange").click();
+      });
+    });
     $("btnFocusWorkspace").addEventListener("click", () => {
       state.focusWorkspace = !state.focusWorkspace;
       syncHud();
@@ -1992,7 +2077,7 @@ self.onmessage = (e) => {
 
     $("toolbar").querySelectorAll(".toolbarResizer").forEach((handle) => {
       handle.addEventListener("mousedown", (e) => {
-        if (window.innerWidth <= 1500) return;
+        if (window.innerWidth <= 1500 || state.toolbarCollapsed) return;
         const split = parseInt(handle.getAttribute("data-toolbar-split"), 10);
         const toolbarRect = $("toolbar").getBoundingClientRect();
         const totalWidth = toolbarRect.width - 20;
